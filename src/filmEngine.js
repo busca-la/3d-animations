@@ -70,29 +70,47 @@ export async function createFilmEngine(outputCanvas, film, assets) {
   sunlight.shadow.bias = -0.0003; scene.add(sunlight);
   const fill = new THREE.DirectionalLight(0xa2ccf5, .6); fill.position.set(15, 12, -14); scene.add(fill);
 
-  function createPerson(x, z, color, scale = 1, label = '') {
-    const group = new THREE.Group(); group.position.set(x, 0.12, z); group.scale.setScalar(scale);
-    addCylinder(group, 'corpo', .34, .29, .95, 0, 1.18, 0, color);
+  function createPerson(x, z, color, scale = 1, role = 'pedestre', options = {}) {
+    // O papel de cada figurante determina percurso, postura e comportamento.
+    // Nenhum personagem de fundo fica olhando fixamente para o expositor.
+    const group = new THREE.Group();
+    group.position.set(x, 0.12, z);
+    group.scale.setScalar(scale);
+    addCylinder(group, 'torso', .34, .29, .95, 0, 1.18, 0, color);
     addSphere(group, 'cabeca', .32, 0, 2.02, 0, '#eac6a8', { roughness: .85 });
     addSphere(group, 'cabelo', .315, 0, 2.24, -.04, '#343239', {}, [1, .44, 1]);
     addSphere(group, 'olho-esquerdo', .029, -.12, 2.04, .294, '#24232a');
     addSphere(group, 'olho-direito', .029, .12, 2.04, .294, '#24232a');
-    const a = [new THREE.Group(), new THREE.Group()];
-    for (const [index, arm] of a.entries()) {
+
+    const arms = [new THREE.Group(), new THREE.Group()];
+    for (const [index, arm] of arms.entries()) {
       arm.position.set(index ? .39 : -.39, 1.53, 0);
       addCylinder(arm, 'braco', .12, .09, .78, 0, -.32, 0, color);
       addSphere(arm, 'mao', .125, 0, -.75, 0, '#ecc7a9');
       group.add(arm);
     }
+
     const legs = [new THREE.Group(), new THREE.Group()];
+    const knees = [];
     for (const [index, leg] of legs.entries()) {
       leg.position.set(index ? .17 : -.17, .77, 0);
-      addCylinder(leg, 'perna', .15, .11, .79, 0, -.37, 0, '#343843');
-      addBox(leg, 'sapato', .26, .16, .39, 0, -.79, .12, '#28262e');
+      addCylinder(leg, 'coxa', .15, .115, .43, 0, -.22, 0, '#343843');
+      const knee = new THREE.Group();
+      knee.position.y = -.44;
+      addCylinder(knee, 'canela', .12, .1, .43, 0, -.21, 0, '#343843');
+      addBox(knee, 'sapato', .26, .16, .39, 0, -.48, .12, '#28262e');
+      leg.add(knee);
+      knees.push(knee);
       group.add(leg);
     }
-    group.userData = { arms: a, legs, x, z, label };
-    scene.add(group); animated.push(group); return group;
+    group.userData = {
+      arms, legs, knees, x, z, role,
+      offset: options.offset || 0,
+      facing: options.facing || 0,
+    };
+    scene.add(group);
+    animated.push(group);
+    return group;
   }
 
   function createBurger(parent, x, y, z, scale = 1) {
@@ -165,10 +183,16 @@ export async function createFilmEngine(outputCanvas, film, assets) {
         lamp.position.set(x + .47, 5.83, -1); scene.add(lamp);
       }
     }
-    const queue = [[1.8, -3.9, '#566a7c'], [3.2, -3.95, '#b47955'], [4.45, -3.92, '#5a6d60'], [5.7, -3.95, '#68597b']];
-    queue.forEach(([x, z, color], i) => createPerson(x, z, color, .8, 'fila-' + i));
+    // Elenco enxuto, com papéis próprios. Uma fila pequena faz sentido na narrativa,
+    // mas as pessoas esperam a vez e se movem, sem encarar o hambúrguer do cenário.
     createPerson(-3.8, -3.6, '#c37a48', 1, 'cliente');
-    createPerson(-10, -3.8, '#3e738d', .9, 'pedestre');
+    createPerson(2.3, -3.95, '#566a7c', .84, 'fila', { offset: .5, facing: Math.PI });
+    createPerson(3.55, -4.1, '#a87855', .81, 'fila', { offset: 2.1, facing: Math.PI });
+    createPerson(-17, -1.38, '#3e738d', .9, 'calçada', { offset: .7 });
+    createPerson(15.5, 9.1, '#7e6c88', .85, 'calçada-oposta', { offset: 1.2 });
+    createPerson(-8.4, .55, '#5b746a', .9, 'faixa', { offset: 1.1 });
+    // Banco existente no cenário, altura do quadril alinhada com o assento.
+    createPerson(-21.6, -2.45, '#8b6d6e', .86, 'banco', { offset: 1.6, facing: .18 });
     // Tráfego em faixas opostas.
     function vehicle(x, z, color, direction) {
       const group = new THREE.Group();
@@ -297,18 +321,93 @@ export async function createFilmEngine(outputCanvas, film, assets) {
     camera.lookAt(...target);
     camera.fov = preset.fov; camera.updateProjectionMatrix();
     if (!loadedModel) {
+      // Percursos contínuos, com velocidade real. Direção e braços acompanham
+      // as pernas; o personagem atravessa na faixa, não no meio do asfalto.
+      const walkPath = (start, end, speed, offset = 0) => {
+        const length = end - start;
+        const cycle = length * 2;
+        const distance = ((time * speed + offset) % cycle + cycle) % cycle;
+        const goingForward = distance < length;
+        return {
+          coordinate: goingForward ? start + distance : end - (distance - length),
+          direction: goingForward ? 1 : -1,
+        };
+      };
+      const animateWalk = (person, localTime, speed, intensity = 1) => {
+        const { arms, legs, knees } = person.userData;
+        const swing = localTime * speed * 3.4;
+        person.position.y = .12 + Math.abs(Math.sin(swing)) * .036 * intensity;
+        legs.forEach((leg, i) => {
+          leg.rotation.x = Math.sin(swing + i * Math.PI) * .48 * intensity;
+          knees[i].rotation.x = Math.max(0, Math.sin(swing + i * Math.PI)) * .25 * intensity;
+        });
+        arms.forEach((arm, i) => {
+          arm.rotation.x = Math.sin(swing + (1 - i) * Math.PI) * .31 * intensity;
+          arm.rotation.z = (i ? -.035 : .035);
+        });
+      };
       for (const person of animated) {
-        const { arms, legs, x, z, label } = person.userData;
-        const isWalker = label === 'pedestre' || label === 'cliente';
-        const walking = ['caminhar', 'correr', 'trafego'].includes(shot.action) && isWalker;
-        const pace = shot.action === 'correr' ? 5.6 : 2.7;
-        person.position.x = x + (walking ? (Math.sin(time * .45 + (label === 'cliente' ? 0 : 2)) * (label === 'cliente' ? 1.25 : 3.4)) : 0);
-        person.position.y = .12 + (walking ? Math.abs(Math.sin(time * pace)) * .04 : 0);
-        person.rotation.y = walking ? Math.PI / 2 : 0;
-        legs.forEach((leg, i) => { leg.rotation.x = walking ? Math.sin(time * pace * 2.0 + i * Math.PI) * .45 : 0; });
-        arms.forEach((arm, i) => { arm.rotation.x = walking ? Math.sin(time * pace * 2.0 + (1 - i) * Math.PI) * .3 : 0; });
-        if (shot.action === 'apontar' && label === 'cliente') arms[1].rotation.x = -1.2;
-        if (shot.action === 'celebrar' && label === 'cliente') { arms[0].rotation.x = -2; arms[1].rotation.x = -2; }
+        const { arms, legs, knees, x, z, role, offset, facing } = person.userData;
+        person.position.set(x, .12, z);
+        person.rotation.set(0, facing, 0);
+        arms.forEach(arm => { arm.rotation.x = -.07; arm.rotation.z = 0; });
+        legs.forEach((leg, i) => { leg.rotation.x = 0; knees[i].rotation.x = 0; });
+
+        if (role === 'banco') {
+          // Coxas à frente, panturrilhas para baixo; gestos discretos das mãos.
+          person.position.y = -.10 + Math.sin(time * .85 + offset) * .008;
+          legs.forEach((leg, i) => {
+            leg.rotation.x = -1.25 + (i ? .07 : -.07);
+            knees[i].rotation.x = 1.20;
+          });
+          arms[0].rotation.x = -.43 + Math.sin(time * .9 + offset) * .055;
+          arms[1].rotation.x = -.25 + Math.sin(time * .7 + offset) * .035;
+          continue;
+        }
+        if (role === 'fila') {
+          person.rotation.y = Math.PI + Math.sin(time * .4 + offset) * .11;
+          person.position.x += Math.sin(time * .65 + offset) * .07;
+          person.position.y += Math.sin(time * 1.7 + offset) * .013;
+          arms[0].rotation.x = -.25 + Math.sin(time * .85 + offset) * .13;
+          arms[1].rotation.x = -.36;
+          if (Math.sin(time * .27 + offset) > .5) arms[1].rotation.x = -.95;
+          continue;
+        }
+        if (role === 'calçada' || role === 'calçada-oposta') {
+          const far = role === 'calçada-oposta';
+          const path = far
+            ? walkPath(10.1, 22.1, 1.14, offset * 3)
+            : walkPath(-18.4, -11.6, 1.22, offset * 3);
+          person.position.x = path.coordinate;
+          person.rotation.y = path.direction > 0 ? Math.PI / 2 : -Math.PI / 2;
+          animateWalk(person, time + offset, far ? 1.14 : 1.22);
+          continue;
+        }
+        if (role === 'faixa') {
+          const path = walkPath(.55, 7.45, .78, offset);
+          person.position.z = path.coordinate;
+          person.rotation.y = path.direction > 0 ? 0 : Math.PI;
+          animateWalk(person, time + offset, .78, .9);
+          continue;
+        }
+        // Personagem principal responde às ações do roteiro. Extras não copiam o gesto.
+        if (role === 'cliente') {
+          const moving = ['caminhar', 'correr', 'trafego'].includes(shot.action);
+          if (moving) {
+            person.position.x = x + Math.min(1.35, local * 1.35);
+            person.rotation.y = Math.PI / 2;
+            animateWalk(person, time, shot.action === 'correr' ? 2.15 : 1.0,
+              shot.action === 'correr' ? 1.25 : .86);
+          } else {
+            person.rotation.y = -.25 + Math.sin(time * .45) * .12;
+            person.position.y = .12 + Math.sin(time * 1.3) * .012;
+            arms[0].rotation.x = -.1 + Math.sin(time * 1.1) * .06;
+            if (shot.action === 'apontar') arms[1].rotation.x = -1.28;
+            if (shot.action === 'celebrar') {
+              arms[0].rotation.x = -2; arms[1].rotation.x = -2;
+            }
+          }
+        }
       }
       for (const car of carModels) {
         car.group.position.x = car.x + Math.sin(time * .27 + (car.direction < 0 ? 2 : 0)) * 12;
