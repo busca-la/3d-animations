@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive, ArrowDownToLine, ArrowRight, AudioLines, Box, Boxes, Building2,
-  CalendarDays, Check, CheckCircle2, ChevronRight, Clapperboard, Clock3,
+  CalendarDays, Check, CheckCircle2, ChevronRight, Clapperboard, Clock3, BriefcaseBusiness,
   CloudOff, Database, Download, FileArchive, FileBox, FileVideo, Film, Bot,
   Folder, FolderOpen, HardDrive, Image as ImageIcon, Info, Layers3,
   LayoutDashboard, Menu, MoreHorizontal, PackageOpen, Plus, Search, ShieldCheck,
@@ -13,6 +13,7 @@ import VideoStudio from './VideoStudio.jsx';
 import McpBridge from './McpBridge.jsx';
 import FilmStudio from './FilmStudio.jsx';
 import VoiceStudio from './VoiceStudio.jsx';
+import Prospector from './Prospector.jsx';
 import { sanitizeFilm } from './filmSchema.js';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
@@ -39,6 +40,7 @@ const NAV = [
   { id: 'film-studio', label: 'Diretor de filmes 3D', icon: Film },
   { id: 'voice-studio', label: 'Narração IA', icon: Mic2 },
   { id: 'mcp', label: 'ChatGPT MCP', icon: Bot },
+  { id: 'prospector', label: 'VP Prospector', icon: BriefcaseBusiness },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
 ];
@@ -551,6 +553,7 @@ export default function App() {
           <button className="btn btn-secondary" onClick={() => {
             setOfflineDemo(true); setTab('voice-studio');
           }}><Mic2 size={18}/> Abrir Narração IA sem biblioteca</button>
+          <button className="btn btn-secondary" onClick={() => { setOfflineDemo(true); setTab('prospector'); }}><BriefcaseBusiness size={18}/> Abrir VP Prospector</button>
         </div>
         <small>Não limpe os dados do site. O modo de recuperação permite gerar vídeos 3D e narrações para download, mas não salva novos arquivos na biblioteca até o armazenamento voltar.</small>
       </div>
@@ -618,6 +621,7 @@ export default function App() {
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
           {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} preferredAudioId={preferredNarrationId} />}
           {tab === 'voice-studio' && <VoiceStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedNarration} onUseInFilm={(id) => { setPreferredNarrationId(id); setTab('film-studio'); }} remoteCommand={remoteNarration} />}
+          {tab === 'prospector' && <Prospector />}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">

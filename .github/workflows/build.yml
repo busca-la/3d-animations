@@ -14,5 +14,7 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: VP Prospector tests
+        run: node --test tests/prospector.test.mjs
       - name: Build
         run: npm run build
