@@ -548,8 +548,11 @@ export default function App() {
           <button className="btn btn-secondary" onClick={() => {
             setOfflineDemo(true); setTab('film-studio');
           }}><Film size={18}/> Abrir Diretor 3D sem biblioteca</button>
+          <button className="btn btn-secondary" onClick={() => {
+            setOfflineDemo(true); setTab('voice-studio');
+          }}><Mic2 size={18}/> Abrir Narração IA sem biblioteca</button>
         </div>
-        <small>Não limpe os dados do site. O modo sem biblioteca permite visualizar e gerar um teste 3D, mas não acessa seus projetos salvos até o armazenamento voltar.</small>
+        <small>Não limpe os dados do site. O modo de recuperação permite gerar vídeos 3D e narrações para download, mas não salva novos arquivos na biblioteca até o armazenamento voltar.</small>
       </div>
     </main>;
   }
@@ -607,7 +610,7 @@ export default function App() {
 
         <main className="main-content">
           {offlineDemo && <div className="storage-recovery-banner" role="alert">
-            <Info size={17}/><span>Modo de recuperação: arquivos locais indisponíveis. O editor 3D funciona com o cenário de exemplo. Ao produzir, use Baixar vídeo para não perder o resultado.</span>
+            <Info size={17}/><span>Modo de recuperação: arquivos locais indisponíveis. Você pode gerar vídeos ou narrações, mas deve baixar os resultados para não perdê-los.</span>
             <button className="btn btn-secondary" onClick={retryLibrary}>Reconectar biblioteca</button>
           </div>}
           {!offlineDemo && <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} films={films} onCommand={executeMcpCommand} />}
