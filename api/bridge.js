@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const code = body.pair_code;
   try {
     if (body.op === 'poll') {
-      const output = await listPending(code, body.seen);
+      const output = await listPending(code, body.seen, body.client_version);
       return res.status(200).json(output);
     }
     if (body.op === 'sync') {
