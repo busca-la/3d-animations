@@ -117,7 +117,7 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
       if (!active || busy) return;
       busy = true;
       try {
-        const { commands } = await callBridge('poll', { seen: [...seen.current].slice(-150), client_version: 'vp3d-film-v1' });
+        const { commands } = await callBridge('poll', { seen: [...seen.current].slice(-150), client_version: 'vp3d-voice-v1' });
         if (!active) return;
         setConnection('connected');
         for (const command of commands || []) {
@@ -206,7 +206,7 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
       <div className="mcp-panel">
         <div className="mcp-panel-icon"><Bot size={27} /></div>
         <h2>Conecte seu estúdio ao ChatGPT</h2>
-        <p>O ChatGPT poderá criar roteiros 3D, animar a cidade, controlar câmeras e solicitar a gravação de vídeos diretamente na biblioteca.</p>
+        <p>O ChatGPT poderá criar roteiros, controlar cenas, produzir vídeos e gerar narrações brasileiras no nosso próprio motor de voz IA.</p>
         {!session ? (
           <button className="btn btn-primary" disabled={working} onClick={start}><Link2 size={17} />{working ? 'Criando...' : 'Criar conexão MCP'}</button>
         ) : (
@@ -242,6 +242,7 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
         <div className="mcp-feature"><Check size={16} /><span>Controlar câmera, giro e fundo do GLB</span></div>
         <div className="mcp-feature"><Check size={16} /><span>Salvar cortes, formato, zoom e texto do vídeo</span></div>
         <div className="mcp-feature"><Check size={16} /><span>Criar roteiros e renderizar filmes 3D em vídeo pela conversa</span></div>
+        <div className="mcp-feature"><Check size={16} /><span>Gerar narrações brasileiras em WAV usando o motor Piper do site</span></div>
         <div className="mcp-rule"><LockKeyhole size={17} /><p>Os arquivos de vídeo e modelos originais <b>continuam no navegador</b>. Só os nomes, IDs e comandos são enviados à nuvem privada.</p></div>
         <div className="mcp-rule"><CircleHelp size={17} /><p>Deixe este site aberto e conectado para executar comandos. Exportação de vídeo, edição interna de malhas 3D e renderização Blender não são automáticas.</p></div>
       </aside>
