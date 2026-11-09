@@ -95,7 +95,18 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
       }
     };
     sync();
-    return () => { active = false; };
+    // Atualiza a presença enquanto o site estiver aberto e ativo; evita anunciar
+    // uma conexão antiga como se o navegador ainda estivesse recebendo comandos.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') sync();
+    }, 120000);
+    const handleFocus = () => { if (document.visibilityState === 'visible') sync(); };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [session?.pairCode, catalogJson, callBridge]);
 
   useEffect(() => {
