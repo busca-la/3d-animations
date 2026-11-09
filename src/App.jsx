@@ -8,6 +8,8 @@ import {
   SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, WandSparkles, X
 } from 'lucide-react';
 import { getAll, remove, save, saveMany, storageEstimate } from './db';
+import ModelStudio from './ModelStudio.jsx';
+import VideoStudio from './VideoStudio.jsx';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
   formatBytes, formatDate, makeBackup, makeId, parseBackup
@@ -28,6 +30,8 @@ const CATEGORY_ICONS = {
 const NAV = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'library', label: 'Biblioteca', icon: Layers3 },
+  { id: 'models', label: 'Visualizador 3D', icon: Box },
+  { id: 'video-editor', label: 'Editor de vídeo', icon: Clapperboard },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
 ];
@@ -111,6 +115,8 @@ export default function App() {
   const [projectDescription, setProjectDescription] = useState('');
   const [projectStatus, setProjectStatus] = useState('idea');
   const [selectedId, setSelectedId] = useState('');
+  const [studioModelId, setStudioModelId] = useState('');
+  const [studioVideoId, setStudioVideoId] = useState('');
   const [detailCategory, setDetailCategory] = useState('outros');
   const [detailProject, setDetailProject] = useState('');
   const [detailNotes, setDetailNotes] = useState('');
@@ -263,6 +269,24 @@ export default function App() {
     finally { setBusy(''); }
   }
 
+  async function saveVideoEdit(id, videoEdit) {
+    const asset = assets.find((item) => item.id === id);
+    if (!asset) throw new Error('Vídeo não encontrado.');
+    await save('assets', { ...asset, videoEdit });
+    await refresh();
+  }
+
+  function openInStudio(asset) {
+    if (fileKind(asset) === '3d') {
+      setStudioModelId(asset.id);
+      setTab('models');
+    } else if (fileKind(asset) === 'video') {
+      setStudioVideoId(asset.id);
+      setTab('video-editor');
+    }
+    setSelectedId('');
+  }
+
   function confirmAssetDelete(asset) {
     setConfirm({
       title: 'Excluir arquivo?',
@@ -386,6 +410,8 @@ export default function App() {
         </header>
 
         <main className="main-content">
+          {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} />}
+          {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">
@@ -639,7 +665,9 @@ export default function App() {
             {fileKind(selected) === '3d' && !modelReady && <p className="preview-help">Carregando visualização GLB… Se não abrir, baixe o modelo original.</p>}
             {fileExtension(selected.name) === 'BLEND' && <p className="preview-help">Arquivos Blender são preservados no formato original e podem ser baixados para edição.</p>}
           </div>
-          <div className="drawer-actions"><button className="btn btn-primary" onClick={() => downloadBlob(selected.blob, selected.name)}><Download size={17} />Baixar original</button>
+          <div className="drawer-actions">
+            {(fileKind(selected) === '3d' || fileKind(selected) === 'video') && <button className="btn btn-secondary" onClick={() => openInStudio(selected)}>{fileKind(selected) === '3d' ? 'Visualizar em 3D' : 'Editar vídeo'}</button>}
+            <button className="btn btn-primary" onClick={() => downloadBlob(selected.blob, selected.name)}><Download size={17} />Baixar original</button>
             <button className="icon-button danger-hover" title="Excluir arquivo" aria-label="Excluir arquivo" onClick={() => confirmAssetDelete(selected)}><Trash2 size={19} /></button></div>
         </aside>
       </div>}
