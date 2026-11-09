@@ -354,6 +354,13 @@ export default function App() {
       setTab('film-studio');
       return { applied: true, filmId: film.id };
     }
+    if (type === 'film_produce') {
+      const film = await saveFilm(payload.film);
+      setStudioFilmId(film.id);
+      setRemoteFilm({ id: command.id, payload: { filmId: film.id } });
+      setTab('film-studio');
+      return { deferred: true };
+    }
     if (type === 'film_export') {
       const film = films.find(f => f.id === payload.filmId);
       if (!film) throw new Error('Roteiro não encontrado no navegador.');
