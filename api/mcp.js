@@ -9,9 +9,9 @@ async function safely(callback) { try { return content(await callback()); } catc
 
 function createServer() {
   const server = new McpServer({
-    name: 'vitor-productions-3d-studio', version: '1.1.0',
+    name: 'vitor-productions-3d-studio', version: '1.2.0',
   }, {
-    instructions: 'Controle o estúdio Vitor Productions usando o código de pareamento mostrado na aba ChatGPT MCP do site. Primeiro consulte listar_arquivos para obter IDs reais. Não invente arquivos, não prometa renderizações Blender e só confirme uma alteração depois de consultar estado_comando. Para criar filmes originais, use criar_filme_3d, espere applied em estado_comando e consulte listar_filmes_3d para obter o ID. Depois use renderizar_filme_3d e confirme applied, que significa vídeo salvo na biblioteca. Não afirme que vídeo existe enquanto o estado for queued. Os arquivos são locais: para executar ações, o site pareado deve estar aberto.',
+    instructions: 'Controle o estúdio Vitor Productions usando o código de pareamento mostrado na aba ChatGPT MCP do site. Primeiro consulte listar_arquivos para obter IDs reais. Não invente arquivos, não prometa renderizações Blender e só confirme uma alteração depois de consultar estado_comando. Para criar filmes originais, prefira produzir_video_3d_completo quando quiser vídeo pronto em um único pedido, espere applied em estado_comando. Alternativamente, use criar_filme_3d, espere applied e consulte listar_filmes_3d para obter o ID. Depois use renderizar_filme_3d e confirme applied, que significa vídeo salvo na biblioteca. Não afirme que vídeo existe enquanto o estado for queued. Os arquivos são locais: para executar ações, o site pareado deve estar aberto.',
   });
 
   const codeSchema = z.string().min(60).max(180).describe('Código de pareamento copiado da aba ChatGPT MCP em 3d-animations-eta.vercel.app. Não é nome do arquivo.');
@@ -129,6 +129,36 @@ function createServer() {
       audioAssetId: audio_asset_id, narration, accent, shots,
     } });
     return { ...result, nextSteps: 'Consulte estado_comando até applied, depois liste filmes 3D para obter film_id e mande renderizar_filme_3d. Nenhum vídeo foi renderizado ainda.' };
+  }));
+
+  server.registerTool('produzir_video_3d_completo', {
+    title: 'Criar, animar, renderizar e salvar vídeo 3D por um único comando',
+    description: 'Pede à plataforma para criar um filme 3D original com cenas, câmera e personagens e então renderizar um vídeo MP4 ou WebM e salvá-lo na biblioteca. Executa via navegador WebGL + MediaRecorder, que PRECISA estar aberto e ativo. O comando retorna queued até o navegador terminar a gravação: confirme status applied usando estado_comando. Não executa arquivos .blend.',
+    inputSchema: {
+      pair_code: codeSchema,
+      title: z.string().min(3).max(100),
+      scene: z.enum(['hamburgueria','cidade','estudio']).optional().default('hamburgueria'),
+      mood: z.enum(['dia','tarde','noite']).optional().default('tarde'),
+      duration_seconds: z.number().min(5).max(90).optional().default(24),
+      format: z.enum(['9:16','16:9','1:1']).optional().default('9:16'),
+      model_asset_id: z.string().optional().default('').describe('Opcional. ID de GLB real importado no site; sem ID usa a cidade 3D própria do software. Arquivo .blend não é renderizável.'),
+      audio_asset_id: z.string().optional().default('').describe('Opcional. ID de arquivo de narração/áudio já importado.'),
+      narration: z.string().max(4000).optional().default(''),
+      shots: z.array(z.object({
+        duration: z.number().min(.5).max(25),
+        camera: z.enum(['abertura','rua','fachada','personagem','produto','alto','travelling']),
+        action: z.enum(['caminhar','correr','parar','apontar','olhar','celebrar','produto','trafego']),
+        text: z.string().max(85),
+        move: z.number().min(0).max(1.5).optional().default(.7),
+      })).min(2).max(12),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  }, async ({ pair_code, title, scene, mood, duration_seconds, format, model_asset_id, audio_asset_id, narration, shots }) => safely(async () => {
+    const queued = await queueCommand(pair_code, 'film_produce', { film: {
+      title, scene, mood, duration: duration_seconds, format, modelAssetId: model_asset_id,
+      audioAssetId: audio_asset_id, narration, shots,
+    } });
+    return { ...queued, important: 'Filme enfileirado, NÃO finalizado. O navegador irá criar o roteiro, renderizar em tempo real e guardar o vídeo na biblioteca. Confirme com estado_comando: apenas applied significa vídeo pronto.' };
   }));
 
   server.registerTool('renderizar_filme_3d', {
