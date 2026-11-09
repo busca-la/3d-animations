@@ -24,8 +24,13 @@ function createServer() {
   }, async ({ pair_code }) => safely(async () => {
     await authorize(pair_code);
     const catalog = await readCatalog(pair_code);
-    return { paired: true, browserCatalogSyncedAt: catalog.syncedAt, assets: catalog.assets.length, projects: catalog.projects.length, films: (catalog.films || []).length,
-      note: 'Se o catálogo estiver vazio, mantenha o site aberto e escolha a aba ChatGPT MCP para sincronizar.' };
+    const synced = catalog.syncedAt ? Date.parse(catalog.syncedAt) : NaN;
+    const browserRecentlySynced = Number.isFinite(synced) && Date.now() - synced < 5 * 60 * 1000;
+    return { paired: true, browserRecentlySynced, browserCatalogSyncedAt: catalog.syncedAt,
+      assets: catalog.assets.length, projects: catalog.projects.length, films: (catalog.films || []).length,
+      note: browserRecentlySynced
+        ? 'O site sincronizou recentemente. A execução de filmes ainda requer a aba aberta.'
+        : 'O código é válido, mas o navegador NÃO sincronizou recentemente. Abra https://3d-animations-eta.vercel.app/?studio=mcp na mesma sessão e use Receber comandos agora.' };
   }));
 
   server.registerTool('listar_arquivos', {
