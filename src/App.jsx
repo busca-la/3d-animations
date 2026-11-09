@@ -416,7 +416,7 @@ export default function App() {
   async function exportBackup() {
     setBusy('backup');
     try {
-      const date = await makeBackup(projects, assets);
+      const date = await makeBackup(projects, assets, films);
       setLastBackup(date);
       try { localStorage.setItem('vp3d-last-backup', date); } catch { /* optional */ }
       notice('Backup ZIP gerado. Guarde o download em outro lugar.');
@@ -433,8 +433,9 @@ export default function App() {
       const parsed = await parseBackup(file);
       await saveMany('projects', parsed.projects);
       await saveMany('assets', parsed.assets);
+      if (parsed.films?.length) await saveMany('films', parsed.films);
       await refresh();
-      notice('Backup restaurado: ' + parsed.projects.length + ' projetos e ' + parsed.assets.length + ' arquivos.');
+      notice('Backup restaurado: ' + parsed.projects.length + ' projetos, ' + parsed.assets.length + ' arquivos e ' + (parsed.films?.length || 0) + ' filmes.');
       setTab('overview');
     } catch (error) { notice('Não foi possível importar: ' + error.message, 'error'); }
     finally { setBusy(''); }
