@@ -107,7 +107,7 @@ export async function readCatalog(code) {
   return await readJson(pathOf(id, 'catalog.json')) || { assets: [], projects: [], films: [], syncedAt: null };
 }
 
-const COMMANDS = new Set(['open_asset', 'camera', 'video_edit', 'film_create', 'film_export']);
+const COMMANDS = new Set(['open_asset', 'camera', 'video_edit', 'film_create', 'film_export', 'film_produce']);
 
 export async function queueCommand(code, type, payload) {
   const { id } = await authorize(code);
@@ -124,7 +124,7 @@ export async function queueCommand(code, type, payload) {
       throw new Error('Roteiro não encontrado na lista sincronizada. Abra o site antes de renderizar.');
     }
   }
-  if (type === 'film_create') {
+  if (type === 'film_create' || type === 'film_produce') {
     if (!payload || !payload.film || typeof payload.film !== 'object') throw new Error('Roteiro inválido.');
     const cleanFilm = sanitizeFilm(payload.film);
     cleanFilm.id = '';
