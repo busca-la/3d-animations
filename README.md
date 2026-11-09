@@ -10,6 +10,7 @@ Uma biblioteca visual, responsiva e **local-first** para guardar e organizar pro
 - Categorias, busca, filtro por projeto e edição de informações.
 - Visualização de imagens, vídeo, áudio e modelos **GLB** com câmera 3D; demais tipos disponíveis para download.
 - **Visualizador 3D dedicado:** rotação livre, zoom, visualização de frente/lado/cima, giro automático, iluminação neutra, fundo claro/escuro e reprodução de animações incluídas no GLB.
+- **Criar curta 3D:** cena original procedural `O cliente que passou direto`, com cinco sequências, cidade, duas fachadas contrastantes, personagem caminhando, carro e múltiplas câmeras. O botão de gravação captura a renderização com trilha sonora sintetizada, salva o vídeo no IndexedDB e abre a edição. A exportação exige Canvas captureStream, MediaRecorder e navegador compatível.
 - **Editor de vídeo (básico):** seleção de trechos, velocidade, formato 9:16/16:9/original, preenchimento ou contenção, zoom progressivo, texto com entrada/saída e exportação de um vídeo editado onde o navegador permitir.
 - Edições não destrutivas dos vídeos salvas no navegador e incluídas no backup ZIP.
 - Exclusão de arquivos e projetos com confirmação; excluir um projeto **não apaga seus arquivos**.
@@ -61,6 +62,6 @@ Para mostrar uma cena ou personagem do Blender no visualizador, exporte em **GLB
 
 ## Próximos passos possíveis
 
-A primeira versão não inclui login, armazenamento em nuvem, colaboração, versionamento automático de arquivos nem integração direta com o Blender. Esses recursos exigirão infraestrutura adicional e desenho de permissões. Não há produções carregadas inicialmente: os materiais reais serão adicionados quando estiverem definidos.
+A primeira versão não inclui login, armazenamento em nuvem, colaboração, versionamento automático de arquivos nem integração direta com o Blender. Esses recursos exigirão infraestrutura adicional e desenho de permissões. A cena procedural de demonstração está incluída no código, mas não copia nem disponibiliza os materiais reais do usuário; arquivos de produção continuam sendo importados localmente.
 
 **Observação de marca:** o símbolo VP desta versão é provisório; substituir pelo logotipo oficial fornecido pela Vitor Productions antes de publicar oficialmente.
