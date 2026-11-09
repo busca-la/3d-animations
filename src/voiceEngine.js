@@ -11,14 +11,21 @@ export const PORTUGUESE_VOICES = [
     modelSize: '~63 MB',
   },
   {
-    id: 'pt_BR-edresson-low',
-    name: 'Edresson',
+    id: 'pt_BR-jeff-medium',
+    name: 'Jeff',
     gender: 'Masculina',
-    description: 'Tom mais leve para narrações curtas',
-    quality: 'Leve · alternativa',
+    description: 'Voz brasileira para narrações diretas',
+    quality: 'Média · alternativa',
     modelSize: '~63 MB',
   },
 ];
+
+const VOICE_PATHS = {
+  'pt_BR-faber-medium': 'pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx',
+  'pt_BR-jeff-medium': 'pt/pt_BR/jeff/medium/pt_BR-jeff-medium.onnx',
+};
+const MODEL_HOST = 'https://huggingface.co/';
+const MODEL_REPOSITORY = 'rhasspy/piper-voices/resolve/main';
 
 let loadedVoice = null;
 let generationLock = false;
@@ -34,29 +41,35 @@ export async function generateNarration({ text, voiceId, onProgress }) {
   generationLock = true;
   try {
     onProgress?.({ phase: 'loading', text: 'Preparando o motor de voz…', progress: null });
-    const { predict, TtsSession, INFERENCE_PROGRESS_URL } = await import('@mintplex-labs/piper-tts-web');
-    // Esta versão do Piper reutiliza um singleton de ONNX. Na troca de voz,
-    // reinicializar a sessão é obrigatório: cada voz usa pesos próprios.
+    const { TtsSession, CachedFileReader } = await import('@jtsage/piper-tts-web');
+    // Sessions são reusadas para a mesma voz, mas novas vozes exigem carregar
+    // pesos ONNX distintos para não reutilizar erroneamente o modelo anterior.
     if (loadedVoice !== voiceId) {
       TtsSession._instance = null;
       loadedVoice = null;
     }
-    const sound = await predict({ text: cleanText, voiceId }, info => {
-      if (info?.url === INFERENCE_PROGRESS_URL || String(info?.url).startsWith('tts://')) {
-        const loaded = Number(info.loaded) || 0;
-        const total = Number(info.total) || 0;
-        onProgress?.({
-          phase: 'speaking',
-          text: total ? 'Sintetizando trecho ' + Math.min(loaded + 1, total) + ' de ' + total + '…' : 'Criando a fala…',
-          progress: total ? Math.round(loaded / total * 100) : null,
-        });
-        return;
-      }
-      if (Number(info?.total) > 0) {
-        const percent = Math.max(0, Math.min(100, Math.round(Number(info.loaded) / Number(info.total) * 100)));
-        onProgress?.({ phase: 'download', progress: percent, text: 'Baixando modelo de voz · ' + percent + '%' });
-      }
-    });
+    let session = TtsSession._instance;
+    if (!session) {
+      const reader = new CachedFileReader({
+        modelHost: MODEL_HOST,
+        modelPathPrefix: MODEL_REPOSITORY,
+        pathMap: VOICE_PATHS,
+        progress: info => {
+          if (Number(info?.total) > 0) {
+            const percent = Math.max(0, Math.min(100, Math.round(Number(info.loaded) / Number(info.total) * 100)));
+            onProgress?.({ phase: 'download', progress: percent, text: 'Baixando modelo de voz · ' + percent + '%' });
+          }
+        },
+      });
+      session = await TtsSession.create({
+        voiceId,
+        fileReader: reader,
+        allowLocalModels: false,
+        fallbackStrategy: 'cdn',
+      });
+    }
+    onProgress?.({ phase: 'speaking', text: 'Sintetizando sua narração…', progress: null });
+    const sound = await session.predict(cleanText);
     if (!(sound instanceof Blob) || sound.size < 1000) throw new Error('O motor retornou um áudio vazio.');
     const bytes = await sound.slice(0, 12).arrayBuffer();
     const magic = new TextDecoder().decode(bytes.slice(0, 4));
@@ -70,7 +83,7 @@ export async function generateNarration({ text, voiceId, onProgress }) {
     if (/storage|quota|opfs|filesystem|NotAllowedError/i.test(message)) {
       throw new Error('O navegador não conseguiu guardar o modelo localmente. Verifique o espaço e abra o site em uma aba normal. ' + message);
     }
-    if (/fetch|network|failed to|load|CORS|ERR_/i.test(message)) {
+    if (/fetch|network|download|404|CORS|ERR_/i.test(message)) {
       throw new Error('Não foi possível baixar ou carregar o modelo de voz. Verifique sua internet e tente novamente. ' + message);
     }
     throw error;
