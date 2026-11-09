@@ -34,7 +34,7 @@ function makeSfx(ctx, dest, t, pitch = 320) {
 }
 
 export default function FilmStudio({ films, assets, activeId, onSelect, onSave, onDelete, onProduced, remoteCommand }) {
-  const selectedFilm = films.find((item) => item.id === activeId) || films[0] || null;
+  const selectedFilm = activeId === '__new__' ? null : (films.find((item) => item.id === activeId) || films[0] || null);
   const [draft, setDraft] = useState(() => sanitizeFilm(demoFilm()));
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
@@ -289,7 +289,7 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
         <button className="btn btn-secondary" disabled={rendering} onClick={() => {
           const starter = sanitizeFilm(demoFilm()); starter.id = '';
           setDraft(starter); setPlaying(false); timelineRef.current.position = 0; setPosition(0); setSelectedShot(0);
-          onSelect(''); setRenderState('Novo roteiro: salve para guardar.');
+          lastSelected.current = null; onSelect('__new__'); setRenderState('Novo roteiro: salve para guardar.');
         }}><Plus size={16}/> Novo</button>
         <button className="btn btn-secondary" disabled={rendering} onClick={save}><Save size={16}/> Salvar roteiro</button>
       </div>
