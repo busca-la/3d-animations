@@ -9,9 +9,9 @@ async function safely(callback) { try { return content(await callback()); } catc
 
 function createServer() {
   const server = new McpServer({
-    name: 'vitor-productions-3d-studio', version: '1.3.0',
+    name: 'vitor-productions-3d-studio', version: '1.4.0',
   }, {
-    instructions: 'Controle o estúdio Vitor Productions usando o código de pareamento mostrado na aba ChatGPT MCP do site. Primeiro consulte listar_arquivos para obter IDs reais. Não invente arquivos, não prometa renderizações Blender e só confirme uma alteração depois de consultar estado_comando. Para criar filmes originais, prefira produzir_video_3d_completo quando quiser vídeo pronto em um único pedido, espere applied em estado_comando. Alternativamente, use criar_filme_3d, espere applied e consulte listar_filmes_3d para obter o ID. Depois use renderizar_filme_3d e confirme applied, que significa vídeo salvo na biblioteca. Não afirme que vídeo existe enquanto o estado for queued. Para criar vozes brasileiras sem ElevenLabs, use gerar_narracao_ptbr e espere applied em estado_comando. A IA de voz Piper roda no navegador e o modelo será baixado na primeira vez. Os arquivos são locais: para executar ações, o site pareado deve estar aberto.',
+    instructions: 'Controle o estúdio Vitor Productions usando o código de pareamento mostrado na aba ChatGPT MCP do site. Primeiro consulte listar_arquivos para obter IDs reais. Não invente arquivos, não prometa renderizações Blender e só confirme uma alteração depois de consultar estado_comando. Para criar filmes originais, prefira produzir_video_3d_completo quando quiser vídeo pronto em um único pedido, espere applied em estado_comando. Alternativamente, use criar_filme_3d, espere applied e consulte listar_filmes_3d para obter o ID. Depois use renderizar_filme_3d e confirme applied, que significa vídeo salvo na biblioteca. Não afirme que vídeo existe enquanto o estado for queued. Para gerar cidades 3D completas a partir de texto, use gerar_cidade_3d e confirme applied no estado_comando. Para criar vozes brasileiras sem ElevenLabs, use gerar_narracao_ptbr e espere applied em estado_comando. A IA de voz Piper roda no navegador e o modelo será baixado na primeira vez. Os arquivos são locais: para executar ações, o site pareado deve estar aberto.',
   });
 
   const codeSchema = z.string().min(60).max(180).describe('Código de pareamento copiado da aba ChatGPT MCP em 3d-animations-eta.vercel.app. Não é nome do arquivo.');
@@ -194,6 +194,19 @@ function createServer() {
       voiceId: voz === 'jeff' ? 'pt_BR-jeff-medium' : 'pt_BR-faber-medium',
     });
     return { ...result, note: 'A narração foi enfileirada, mas NÃO está pronta. Deixe o site aberto, aguarde o modelo local e confirme applied em estado_comando. O WAV aparece no Estúdio de Narração e na biblioteca local.' };
+  }));
+
+  server.registerTool('gerar_cidade_3d', {
+    title: 'Gerar cidade 3D original a partir de descrição em português',
+    description: 'Converte uma descrição de cidade em um layout urbano procedural completo de Three.js. O navegador gera vias, quarteirões, lojas, árvores, semáforos, veículos e pessoas e exporta um GLB salvo na biblioteca. É um compilador de descrição e não um modelo de linguagem generativo externo. O site pareado precisa estar aberto e conectado. Apenas estado_comando applied confirma o arquivo pronto.',
+    inputSchema: {
+      pair_code: codeSchema,
+      descricao: z.string().min(8).max(1500).describe('Descrição completa da cidade em português, incluindo bairro, estilo, horário, lojas, vegetação e tráfego.'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  }, async ({ pair_code, descricao }) => safely(async () => {
+    const result = await queueCommand(pair_code, 'city_generate', { prompt: descricao });
+    return { ...result, nextSteps: 'Cidade enfileirada. Deixe o site aberto na mesma sessão. Confirme estado_comando=applied antes de afirmar que o GLB está salvo. Abra Biblioteca ou Cidade IA para usar o modelo no filme.' };
   }));
 
   server.registerTool('estado_comando', {
