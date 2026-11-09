@@ -105,7 +105,7 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
       if (!active || busy) return;
       busy = true;
       try {
-        const { commands } = await callBridge('poll', { seen: [...seen.current].slice(-150) });
+        const { commands } = await callBridge('poll', { seen: [...seen.current].slice(-150), client_version: 'vp3d-film-v1' });
         if (!active) return;
         setConnection('connected');
         for (const command of commands || []) {
