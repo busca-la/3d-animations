@@ -77,6 +77,7 @@ O cenário incorporado contém rua com marcações coerentes, fachadas de lojas,
 
 Com o plugin **3D VP** conectado e um código de pareamento válido, use as ferramentas:
 
+- `produzir_video_3d_completo` — em um único comando cria roteiro, renderiza quadros no navegador e salva o vídeo na biblioteca (confirme `applied`).
 - `criar_filme_3d` — envia um roteiro com múltiplos planos para a biblioteca do site.
 - `estado_comando` — verifica se o roteiro foi realmente salvo (precisa retornar `applied`).
 - `listar_filmes_3d` — encontra o ID do novo filme quando a sincronização completar.
@@ -102,7 +103,7 @@ O estúdio inclui um servidor **MCP Streamable HTTP** na URL:
 5. Instale o plugin e selecione-o com @ em uma conversa. Envie o código em um pedido como: **"Usando o plugin Vitor Productions, consulte meus arquivos com este código: ..."**
 6. Mantenha o site aberto para que ele receba os comandos (consultados aproximadamente a cada 15 segundos). Safari pode suspender abas em segundo plano.
 
-**Ferramentas:** `conexao_status`, `listar_arquivos`, `abrir_arquivo`, `ajustar_camera_3d`, `editar_video`, `listar_filmes_3d`, `criar_filme_3d`, `renderizar_filme_3d`, `estado_comando`. Os comandos são **enfileirados** e só podem ser considerados executados quando `estado_comando` retornar `applied` após confirmação do navegador.
+**Ferramentas:** `conexao_status`, `listar_arquivos`, `abrir_arquivo`, `ajustar_camera_3d`, `editar_video`, `listar_filmes_3d`, `criar_filme_3d`, `renderizar_filme_3d`, `produzir_video_3d_completo`, `estado_comando`. Os comandos são **enfileirados** e só podem ser considerados executados quando `estado_comando` retornar `applied` após confirmação do navegador.
 
 ### Arquitetura e segurança
 
