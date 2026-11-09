@@ -114,6 +114,8 @@ export default function App() {
   const [assets, setAssets] = useState([]);
   const [films, setFilms] = useState([]);
   const [isLoading, setLoading] = useState(true);
+  const [storageError, setStorageError] = useState('');
+  const [offlineDemo, setOfflineDemo] = useState(false);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
@@ -157,18 +159,36 @@ export default function App() {
   const backupInputRef = useRef(null);
 
   const refresh = useCallback(async () => {
-    const [allProjects, allAssets, allFilms, usage] = await Promise.all([
-      getAll('projects'), getAll('assets'), getAll('films'), storageEstimate()
+    // Nunca bloquear a biblioteca aguardando StorageManager. Safari pode demorar
+    // indefinidamente ao estimar o espaço de Blobs grandes.
+    const [allProjects, allAssets, allFilms] = await Promise.all([
+      getAll('projects'), getAll('assets'), getAll('films'),
     ]);
     setProjects(allProjects.sort(recentFirst));
     setAssets(allAssets.sort(recentFirst));
     setFilms(allFilms.sort(recentFirst));
-    setEstimate(usage);
+    storageEstimate().then(setEstimate).catch(() => {});
   }, []);
 
   useEffect(() => {
-    refresh().catch((error) => setToast({ type: 'error', text: error.message }))
-      .finally(() => setLoading(false));
+    let active = true;
+    // Mesmo se uma API de armazenamento do Safari não responder, a tela
+    // "Preparando seu estúdio" NÃO pode prender o usuário para sempre.
+    const watchdog = window.setTimeout(() => {
+      if (!active) return;
+      setStorageError('O Safari demorou para abrir a biblioteca. Nenhum arquivo foi apagado.');
+      setLoading(false);
+    }, 11000);
+    refresh().then(() => {
+      if (active) setStorageError('');
+    }).catch((error) => {
+      if (active) setStorageError(error.message || 'O Safari não abriu a biblioteca local.');
+    }).finally(() => {
+      if (!active) return;
+      window.clearTimeout(watchdog);
+      setLoading(false);
+    });
+    return () => { active = false; window.clearTimeout(watchdog); };
   }, [refresh]);
 
   useEffect(() => {
@@ -472,8 +492,43 @@ export default function App() {
 
   function statusCounts(status) { return projects.filter((project) => project.status === status).length; }
 
+  async function retryLibrary() {
+    setLoading(true);
+    setStorageError('');
+    try {
+      await refresh();
+      setOfflineDemo(false);
+      notice('Biblioteca reaberta com sucesso.');
+    } catch (error) {
+      setStorageError(error.message || 'A biblioteca não respondeu.');
+    } finally { setLoading(false); }
+  }
+
   if (isLoading) {
-    return <div className="boot-screen"><div className="brand-mark">V<span>·</span>P</div><span>Preparando seu estúdio…</span></div>;
+    return <div className="boot-screen" role="status">
+      <div className="brand-mark">V<span>·</span>P</div>
+      <span>Preparando seu estúdio…</span>
+      <small className="boot-subtitle">Abrindo seus projetos locais com segurança.</small>
+    </div>;
+  }
+
+  if (storageError && !offlineDemo) {
+    return <main className="storage-recovery" role="main">
+      <div className="storage-recovery-card">
+        <div className="brand-mark">V<span>·</span>P</div>
+        <p className="section-kicker">VITOR PRODUCTIONS / DIAGNÓSTICO</p>
+        <h1>O estúdio abriu. Sua biblioteca precisa de atenção.</h1>
+        <p>{storageError}</p>
+        <p><strong>Seus arquivos não foram excluídos.</strong> O Safari pode bloquear a abertura do IndexedDB durante uma atualização ou leitura de arquivos grandes.</p>
+        <div className="storage-recovery-actions">
+          <button className="btn btn-primary" onClick={retryLibrary}><Database size={18}/> Tentar abrir biblioteca</button>
+          <button className="btn btn-secondary" onClick={() => {
+            setOfflineDemo(true); setTab('film-studio');
+          }}><Film size={18}/> Abrir Diretor 3D sem biblioteca</button>
+        </div>
+        <small>Não limpe os dados do site. O modo sem biblioteca permite visualizar e gerar um teste 3D, mas não acessa seus projetos salvos até o armazenamento voltar.</small>
+      </div>
+    </main>;
   }
 
   return (
@@ -528,7 +583,11 @@ export default function App() {
         </header>
 
         <main className="main-content">
-          <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} films={films} onCommand={executeMcpCommand} />
+          {offlineDemo && <div className="storage-recovery-banner" role="alert">
+            <Info size={17}/><span>Modo de recuperação: arquivos locais indisponíveis. O editor 3D funciona com o cenário de exemplo. Ao produzir, use Baixar vídeo para não perder o resultado.</span>
+            <button className="btn btn-secondary" onClick={retryLibrary}>Reconectar biblioteca</button>
+          </div>}
+          {!offlineDemo && <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} films={films} onCommand={executeMcpCommand} />}
           {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} remoteCommand={remoteCamera} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
           {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} />}

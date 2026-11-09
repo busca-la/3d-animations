@@ -252,11 +252,20 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
       const extension = clip.type.includes('mp4') ? 'mp4' : 'webm';
       const name = sourceFilm.title.replace(/[^\w\-À-ÿ ]/g, '').trim().replace(/\s+/g, '-') || 'filme-3d';
       const filename = name + '-' + new Date().toISOString().slice(0, 10) + '.' + extension;
-      const result = await onProduced(clip, filename, sourceFilm);
+      // Não perder uma renderização completa se apenas o IndexedDB falhou.
+      // Safari pode recusar gravação no armazenamento mesmo após gerar o vídeo.
       setLastOutput({ blob: clip, filename });
-      setRenderState('Vídeo finalizado e salvo na biblioteca: ' + filename);
-      complete('applied');
-      return result;
+      try {
+        const result = await onProduced(clip, filename, sourceFilm);
+        setRenderState('Vídeo finalizado e salvo na biblioteca: ' + filename);
+        complete('applied');
+        return result;
+      } catch (saveError) {
+        setRenderState('Vídeo 3D gerado, mas o Safari não conseguiu salvá-lo na biblioteca. ' +
+          'Clique em Baixar vídeo para guardar seu arquivo. Erro: ' + saveError.message);
+        complete('failed', 'O vídeo foi gerado, mas não foi salvo na biblioteca: ' + saveError.message);
+        return null;
+      }
     } catch (error) {
       setError(error.message);
       setRenderState('Falha ao produzir vídeo: ' + error.message);
