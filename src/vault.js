@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { sanitizeFilm } from './filmSchema.js';
 
 export const CATEGORIES = [
   { id: 'personagens', label: 'Personagens' },
@@ -75,7 +76,7 @@ export function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000 * 30);
 }
 
-export async function makeBackup(projects, assets) {
+export async function makeBackup(projects, assets, films = []) {
   const zip = new JSZip();
   const now = new Date().toISOString();
   const manifest = {
@@ -83,6 +84,7 @@ export async function makeBackup(projects, assets) {
     schema: 1,
     exportedAt: now,
     projects,
+    films: films.map((film) => sanitizeFilm(film)),
     assets: assets.map(({ blob, ...metadata }) => metadata),
   };
   zip.file('manifest.json', JSON.stringify(manifest, null, 2));
@@ -156,5 +158,12 @@ export async function parseBackup(file) {
       blob: new Blob([contents], { type: mime }),
     });
   }
-  return { projects: cleanProjects, assets: cleanAssets };
+  const cleanFilms = (Array.isArray(manifest.films) ? manifest.films : []).slice(0, 100).map((film) => {
+    if (!film || typeof film.id !== 'string' || !/^[a-z0-9-]{1,128}$/i.test(film.id)) {
+      throw new Error('O backup contém um roteiro de filme inválido.');
+    }
+    return { ...sanitizeFilm(film), createdAt: film.createdAt || new Date().toISOString(),
+      updatedAt: film.updatedAt || new Date().toISOString() };
+  });
+  return { projects: cleanProjects, assets: cleanAssets, films: cleanFilms };
 }
