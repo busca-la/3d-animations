@@ -142,6 +142,17 @@ export async function parseBackup(file) {
       mime,
       size: contents.size,
       createdAt: asset.createdAt || new Date().toISOString(),
+      videoEdit: asset.videoEdit && typeof asset.videoEdit === 'object' ? {
+        start: Number.isFinite(asset.videoEdit.start) ? Math.max(0, asset.videoEdit.start) : 0,
+        end: Number.isFinite(asset.videoEdit.end) ? Math.max(0, asset.videoEdit.end) : 0,
+        speed: [0.5, 0.75, 1, 1.25, 1.5, 2].includes(asset.videoEdit.speed) ? asset.videoEdit.speed : 1,
+        aspect: ['9:16', '16:9', 'original'].includes(asset.videoEdit.aspect) ? asset.videoEdit.aspect : '9:16',
+        resolution: [720, 1080].includes(asset.videoEdit.resolution) ? asset.videoEdit.resolution : 720,
+        fit: ['contain', 'cover'].includes(asset.videoEdit.fit) ? asset.videoEdit.fit : 'cover',
+        zoom: ['none', 'in', 'out'].includes(asset.videoEdit.zoom) ? asset.videoEdit.zoom : 'none',
+        text: String(asset.videoEdit.text || '').slice(0, 120),
+        textPosition: ['center', 'bottom'].includes(asset.videoEdit.textPosition) ? asset.videoEdit.textPosition : 'bottom',
+      } : undefined,
       blob: new Blob([contents], { type: mime }),
     });
   }
