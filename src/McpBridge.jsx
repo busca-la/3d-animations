@@ -13,7 +13,7 @@ function readSession() {
   } catch { return null; }
 }
 
-export default function McpBridge({ assets, projects, visible, onCommand }) {
+export default function McpBridge({ assets, projects, films = [], visible, onCommand }) {
   const [session, setSession] = useState(readSession);
   const [working, setWorking] = useState(false);
   const [connection, setConnection] = useState('disconnected');
@@ -29,7 +29,8 @@ export default function McpBridge({ assets, projects, visible, onCommand }) {
       id: asset.id, name: asset.name, kind: fileKind(asset), projectId: asset.projectId || '',
     })),
     projects: projects.map((project) => ({ id: project.id, name: project.name })),
-  }), [assets, projects]);
+    films: films.map((film) => ({ id: film.id, title: film.title, duration: film.duration, format: film.format })),
+  }), [assets, projects, films]);
 
   const catalogJson = useMemo(() => JSON.stringify(catalog), [catalog]);
 
@@ -174,7 +175,7 @@ export default function McpBridge({ assets, projects, visible, onCommand }) {
       <div className="mcp-panel">
         <div className="mcp-panel-icon"><Bot size={27} /></div>
         <h2>Conecte seu estúdio ao ChatGPT</h2>
-        <p>O ChatGPT poderá listar modelos e vídeos, abrir arquivos, mudar ângulos de câmera e salvar ajustes de vídeo no navegador.</p>
+        <p>O ChatGPT poderá criar roteiros 3D, animar a cidade, controlar câmeras e solicitar a gravação de vídeos diretamente na biblioteca.</p>
         {!session ? (
           <button className="btn btn-primary" disabled={working} onClick={start}><Link2 size={17} />{working ? 'Criando...' : 'Criar conexão MCP'}</button>
         ) : (
@@ -192,7 +193,7 @@ export default function McpBridge({ assets, projects, visible, onCommand }) {
               <div><strong>3. Adicionar ao ChatGPT</strong></div>
               <p>Abra <a href="https://chatgpt.com/plugins" target="_blank" rel="noreferrer">ChatGPT Plugins</a>, clique em <b>+ → Adicionar servidor MCP personalizado</b>, escolha <b>Sem autenticação</b> e cole a URL. Depois instale o plugin “Vitor Productions 3D Studio”. No chat, escolha o plugin e envie o código de pareamento.</p>
             </div>
-            <div className="mcp-connection-info"><Cloud size={15}/><span>Última sincronização: {lastSync || 'pendente'} · {catalog.assets.length} arquivos e {catalog.projects.length} projetos.</span></div>
+            <div className="mcp-connection-info"><Cloud size={15}/><span>Última sincronização: {lastSync || 'pendente'} · {catalog.assets.length} arquivos, {catalog.projects.length} projetos e {catalog.films.length} filmes.</span></div>
             <button className="btn btn-secondary" disabled={working} onClick={disconnect}><Unplug size={16}/>{working ? 'Desconectando...' : 'Revogar esta conexão'}</button>
           </>
         )}
@@ -205,6 +206,7 @@ export default function McpBridge({ assets, projects, visible, onCommand }) {
         <div className="mcp-feature"><Check size={16} /><span>Abrir modelos GLB e vídeos já existentes</span></div>
         <div className="mcp-feature"><Check size={16} /><span>Controlar câmera, giro e fundo do GLB</span></div>
         <div className="mcp-feature"><Check size={16} /><span>Salvar cortes, formato, zoom e texto do vídeo</span></div>
+        <div className="mcp-feature"><Check size={16} /><span>Criar roteiros e renderizar filmes 3D em vídeo pela conversa</span></div>
         <div className="mcp-rule"><LockKeyhole size={17} /><p>Os arquivos de vídeo e modelos originais <b>continuam no navegador</b>. Só os nomes, IDs e comandos são enviados à nuvem privada.</p></div>
         <div className="mcp-rule"><CircleHelp size={17} /><p>Deixe este site aberto e conectado para executar comandos. Exportação de vídeo, edição interna de malhas 3D e renderização Blender não são automáticas.</p></div>
       </aside>

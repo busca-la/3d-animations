@@ -11,6 +11,8 @@ import { getAll, remove, save, saveMany, storageEstimate } from './db';
 import ModelStudio from './ModelStudio.jsx';
 import VideoStudio from './VideoStudio.jsx';
 import McpBridge from './McpBridge.jsx';
+import FilmStudio from './FilmStudio.jsx';
+import { sanitizeFilm } from './filmSchema.js';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
   formatBytes, formatDate, makeBackup, makeId, parseBackup
@@ -33,6 +35,7 @@ const NAV = [
   { id: 'library', label: 'Biblioteca', icon: Layers3 },
   { id: 'models', label: 'Visualizador 3D', icon: Box },
   { id: 'video-editor', label: 'Editor de vídeo', icon: Clapperboard },
+  { id: 'film-studio', label: 'Diretor de filmes 3D', icon: Film },
   { id: 'mcp', label: 'ChatGPT MCP', icon: Bot },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
@@ -103,6 +106,7 @@ export default function App() {
   const [tab, setTab] = useState('overview');
   const [projects, setProjects] = useState([]);
   const [assets, setAssets] = useState([]);
+  const [films, setFilms] = useState([]);
   const [isLoading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
@@ -120,6 +124,8 @@ export default function App() {
   const [studioModelId, setStudioModelId] = useState('');
   const [studioVideoId, setStudioVideoId] = useState('');
   const [remoteCamera, setRemoteCamera] = useState(null);
+  const [studioFilmId, setStudioFilmId] = useState('');
+  const [remoteFilm, setRemoteFilm] = useState(null);
   const [detailCategory, setDetailCategory] = useState('outros');
   const [detailProject, setDetailProject] = useState('');
   const [detailNotes, setDetailNotes] = useState('');
@@ -136,11 +142,12 @@ export default function App() {
   const backupInputRef = useRef(null);
 
   const refresh = useCallback(async () => {
-    const [allProjects, allAssets, usage] = await Promise.all([
-      getAll('projects'), getAll('assets'), storageEstimate()
+    const [allProjects, allAssets, allFilms, usage] = await Promise.all([
+      getAll('projects'), getAll('assets'), getAll('films'), storageEstimate()
     ]);
     setProjects(allProjects.sort(recentFirst));
     setAssets(allAssets.sort(recentFirst));
+    setFilms(allFilms.sort(recentFirst));
     setEstimate(usage);
   }, []);
 
@@ -279,6 +286,38 @@ export default function App() {
     await refresh();
   }
 
+  async function saveFilm(film) {
+    const cleaned = sanitizeFilm(film);
+    const now = new Date().toISOString();
+    const old = films.find((f) => f.id === cleaned.id);
+    const stored = { ...cleaned, id: old?.id || makeId(),
+      createdAt: old?.createdAt || now, updatedAt: now };
+    if (stored.modelAssetId && !assets.some(a => a.id === stored.modelAssetId && fileKind(a) === '3d')) {
+      throw new Error('O modelo GLB escolhido não está disponível neste navegador.');
+    }
+    await save('films', stored);
+    await refresh();
+    return stored;
+  }
+
+  async function deleteFilm(id) {
+    await remove('films', id);
+    if (studioFilmId === id) setStudioFilmId('__new__');
+    await refresh();
+  }
+
+  async function saveProducedVideo(blob, filename, film) {
+    const record = {
+      id: makeId(), name: filename, mime: blob.type || (filename.endsWith('.mp4') ? 'video/mp4' : 'video/webm'),
+      category: 'videos', projectId: '', size: blob.size, createdAt: new Date().toISOString(),
+      notes: 'Produzido no Diretor de Filmes 3D · ' + film.title, blob,
+    };
+    await save('assets', record);
+    await refresh();
+    notice('Filme produzido e salvo na biblioteca.');
+    return record;
+  }
+
   function openInStudio(asset) {
     if (fileKind(asset) === '3d') {
       setStudioModelId(asset.id);
@@ -309,6 +348,20 @@ export default function App() {
       setTab('models');
       return { deferred: true };
     }
+    if (type === 'film_create') {
+      const film = await saveFilm(payload.film);
+      setStudioFilmId(film.id);
+      setTab('film-studio');
+      return { applied: true, filmId: film.id };
+    }
+    if (type === 'film_export') {
+      const film = films.find(f => f.id === payload.filmId);
+      if (!film) throw new Error('Roteiro não encontrado no navegador.');
+      setStudioFilmId(film.id);
+      setRemoteFilm({ id: command.id, payload: { filmId: film.id } });
+      setTab('film-studio');
+      return { deferred: true };
+    }
     if (type === 'video_edit') {
       if (!target || fileKind(target) !== 'video') throw new Error('Vídeo não encontrado neste navegador.');
       const clean = {
@@ -327,7 +380,7 @@ export default function App() {
       return { applied: true };
     }
     throw new Error('Comando remoto desconhecido.');
-  }, [assets, studioModelId, refresh]);
+  }, [assets, films, studioModelId, refresh]);
 
   function confirmAssetDelete(asset) {
     setConfirm({
@@ -363,7 +416,7 @@ export default function App() {
   async function exportBackup() {
     setBusy('backup');
     try {
-      const date = await makeBackup(projects, assets);
+      const date = await makeBackup(projects, assets, films);
       setLastBackup(date);
       try { localStorage.setItem('vp3d-last-backup', date); } catch { /* optional */ }
       notice('Backup ZIP gerado. Guarde o download em outro lugar.');
@@ -380,8 +433,9 @@ export default function App() {
       const parsed = await parseBackup(file);
       await saveMany('projects', parsed.projects);
       await saveMany('assets', parsed.assets);
+      if (parsed.films?.length) await saveMany('films', parsed.films);
       await refresh();
-      notice('Backup restaurado: ' + parsed.projects.length + ' projetos e ' + parsed.assets.length + ' arquivos.');
+      notice('Backup restaurado: ' + parsed.projects.length + ' projetos, ' + parsed.assets.length + ' arquivos e ' + (parsed.films?.length || 0) + ' filmes.');
       setTab('overview');
     } catch (error) { notice('Não foi possível importar: ' + error.message, 'error'); }
     finally { setBusy(''); }
@@ -452,9 +506,10 @@ export default function App() {
         </header>
 
         <main className="main-content">
-          <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} onCommand={executeMcpCommand} />
+          <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} films={films} onCommand={executeMcpCommand} />
           {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} remoteCommand={remoteCamera} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
+          {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} />}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">
@@ -463,7 +518,7 @@ export default function App() {
                 <p>Personagens, cidades, animações e projetos 3D organizados para a próxima produção.</p>
                 <div className="hero-actions">
                   <button className="btn btn-primary" onClick={() => openUpload()}><Upload size={17} />Adicionar arquivos</button>
-                  <button className="btn btn-ghost" onClick={() => openProject()}><Folder size={17} />Novo projeto <ArrowRight size={16} /></button>
+                  <button className="btn btn-ghost" onClick={() => setTab('film-studio')}><Film size={17} /> Produzir filme 3D <ArrowRight size={16} /></button>
                 </div>
               </div>
               <div className="hero-art" aria-hidden="true">
