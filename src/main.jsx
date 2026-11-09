@@ -8,6 +8,7 @@ import './film.css';
 import './voice.css';
 import './city.css';
 import './plans.css';
+import './account.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode><App /></React.StrictMode>
