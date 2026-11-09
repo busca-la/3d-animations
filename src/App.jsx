@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive, ArrowDownToLine, ArrowRight, AudioLines, Box, Boxes, Building2,
   CalendarDays, Check, CheckCircle2, ChevronRight, Clapperboard, Clock3,
-  CloudOff, Database, Download, FileArchive, FileBox, FileVideo, Film,
+  CloudOff, Database, Download, FileArchive, FileBox, FileVideo, Film, Bot,
   Folder, FolderOpen, HardDrive, Image as ImageIcon, Info, Layers3,
   LayoutDashboard, Menu, MoreHorizontal, PackageOpen, Plus, Search, ShieldCheck,
   SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, WandSparkles, X
@@ -10,6 +10,7 @@ import {
 import { getAll, remove, save, saveMany, storageEstimate } from './db';
 import ModelStudio from './ModelStudio.jsx';
 import VideoStudio from './VideoStudio.jsx';
+import McpBridge from './McpBridge.jsx';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
   formatBytes, formatDate, makeBackup, makeId, parseBackup
@@ -32,6 +33,7 @@ const NAV = [
   { id: 'library', label: 'Biblioteca', icon: Layers3 },
   { id: 'models', label: 'Visualizador 3D', icon: Box },
   { id: 'video-editor', label: 'Editor de vídeo', icon: Clapperboard },
+  { id: 'mcp', label: 'ChatGPT MCP', icon: Bot },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
 ];
@@ -117,6 +119,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState('');
   const [studioModelId, setStudioModelId] = useState('');
   const [studioVideoId, setStudioVideoId] = useState('');
+  const [remoteCamera, setRemoteCamera] = useState(null);
   const [detailCategory, setDetailCategory] = useState('outros');
   const [detailProject, setDetailProject] = useState('');
   const [detailNotes, setDetailNotes] = useState('');
@@ -287,6 +290,45 @@ export default function App() {
     setSelectedId('');
   }
 
+  const executeMcpCommand = useCallback(async (command) => {
+    const { type, payload = {} } = command;
+    const target = payload.assetId ? assets.find((item) => item.id === payload.assetId) : null;
+    if (type === 'open_asset') {
+      if (!target) throw new Error('Arquivo não encontrado neste navegador.');
+      if (fileKind(target) === '3d') { setStudioModelId(target.id); setTab('models'); }
+      else if (fileKind(target) === 'video') { setStudioVideoId(target.id); setTab('video-editor'); }
+      else throw new Error('Somente GLB e vídeos podem ser abertos pelos estúdios.');
+      return { applied: true };
+    }
+    if (type === 'camera') {
+      const model = target || assets.find((item) => item.id === studioModelId && fileKind(item) === '3d') ||
+        assets.find((item) => fileKind(item) === '3d');
+      if (!model || fileKind(model) !== '3d') throw new Error('Nenhum modelo GLB disponível para controlar.');
+      setStudioModelId(model.id);
+      setRemoteCamera({ id: command.id, payload: { ...payload, assetId: model.id } });
+      setTab('models');
+      return { deferred: true };
+    }
+    if (type === 'video_edit') {
+      if (!target || fileKind(target) !== 'video') throw new Error('Vídeo não encontrado neste navegador.');
+      const clean = {
+        ...target.videoEdit,
+        start: Math.max(0, Number(payload.start) || 0),
+        end: Math.max(0, Number(payload.end) || 0),
+        speed: [0.5, 0.75, 1, 1.25, 1.5, 2].includes(Number(payload.speed)) ? Number(payload.speed) : 1,
+        aspect: ['9:16', '16:9', 'original'].includes(payload.aspect) ? payload.aspect : '9:16',
+        zoom: ['none', 'in', 'out'].includes(payload.zoom) ? payload.zoom : 'none',
+        text: String(payload.text || '').slice(0, 120),
+      };
+      await save('assets', { ...target, videoEdit: clean });
+      await refresh();
+      setStudioVideoId(target.id);
+      setTab('video-editor');
+      return { applied: true };
+    }
+    throw new Error('Comando remoto desconhecido.');
+  }, [assets, studioModelId, refresh]);
+
   function confirmAssetDelete(asset) {
     setConfirm({
       title: 'Excluir arquivo?',
@@ -410,7 +452,8 @@ export default function App() {
         </header>
 
         <main className="main-content">
-          {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} />}
+          <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} onCommand={executeMcpCommand} />
+          {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} remoteCommand={remoteCamera} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
           {tab === 'overview' && <>
             <section className="hero">

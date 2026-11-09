@@ -59,8 +59,38 @@ Use **Backups → Baixar backup ZIP** com frequência e salve uma cópia em outr
 
 Para mostrar uma cena ou personagem do Blender no visualizador, exporte em **GLB** com materiais e texturas incorporados. Arquivos .blend, .fbx, .obj, cenas e outros formatos continuam guardados para download, mas não são abertos como modelos 3D interativos diretamente.
 
+## Integração MCP com ChatGPT
+
+O estúdio inclui um servidor **MCP Streamable HTTP** na URL:
+
+`https://3d-animations-eta.vercel.app/api/mcp`
+
+### Como conectar
+
+1. Abra o site, importe um `.glb` ou `.mp4` real e abra a aba **ChatGPT MCP**.
+2. Clique em **Criar conexão MCP**, copie a URL acima e o **código de pareamento** privado.
+3. No ChatGPT web, abra **Plugins → + → Adicionar servidor MCP personalizado** (disponibilidade depende do plano e permissões da conta).
+4. Escolha **Sem autenticação**. As ações individuais exigem o código de pareamento temporário, que é validado no servidor.
+5. Instale o plugin e selecione-o com @ em uma conversa. Envie o código em um pedido como: **"Usando o plugin Vitor Productions, consulte meus arquivos com este código: ..."**
+6. Mantenha o site aberto para que ele receba os comandos (consultados aproximadamente a cada 15 segundos). Safari pode suspender abas em segundo plano.
+
+**Ferramentas:** `conexao_status`, `listar_arquivos`, `abrir_arquivo`, `ajustar_camera_3d`, `editar_video`, `estado_comando`. Os comandos são **enfileirados** e só podem ser considerados executados quando `estado_comando` retornar `applied` após confirmação do navegador.
+
+### Arquitetura e segurança
+
+- Os modelos 3D e vídeos originais permanecem no **IndexedDB local**; os arquivos não vão para o MCP nem para o Blob.
+- Apenas **IDs, nomes dos arquivos/projetos e comandos de edição** são sincronizados com o armazenamento **Vercel Blob privado**.
+- O código de pareamento é uma credencial temporária assinada no servidor, com validade de **7 dias** e revogação manual pela aba MCP. Não publique o código.
+- As ferramentas não têm acesso ao Blender, à malha interna dos modelos, a exportação automática nem a dados de outro navegador.
+- O endpoint aceita descoberta MCP sem autenticação; as ferramentas que consultam dados ou modificam a sessão exigem o código válido.
+- Se o site estiver fechado ou inativo, os comandos ficam pendentes. Códigos expirados ou revogados não permitem ações.
+- A operação depende dos limites gratuitos da conta Vercel; uso frequente pode esgotar a cota do Blob, interrompendo a sincronização até a renovação.
+- Conectar o plugin ao ChatGPT exige ação explícita do proprietário da conta; o site não pode instalar um plugin em nome do usuário.
+
+**Variáveis de ambiente da Vercel:** `BLOB_READ_WRITE_TOKEN` (gerada ao vincular o store privado) e `VP_MCP_SIGNING_SECRET` (aleatória e mantida somente no backend). Nunca publicar valores em GitHub nem em código cliente.
+
 ## Próximos passos possíveis
 
-A primeira versão não inclui login, armazenamento em nuvem, colaboração, versionamento automático de arquivos nem integração direta com o Blender. Esses recursos exigirão infraestrutura adicional e desenho de permissões. Não há produções carregadas inicialmente: os materiais reais serão adicionados quando estiverem definidos.
+A primeira versão não inclui login, armazenamento em nuvem dos arquivos originais, colaboração, versionamento automático de arquivos nem integração direta com o Blender. Esses recursos exigirão infraestrutura adicional e desenho de permissões. Não há produções carregadas inicialmente: os materiais reais serão adicionados quando estiverem definidos.
 
 **Observação de marca:** o símbolo VP desta versão é provisório; substituir pelo logotipo oficial fornecido pela Vitor Productions antes de publicar oficialmente.
