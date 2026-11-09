@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, ChevronDown, Expand, Maximize2, Minimize2, MousePointer2,
-  Pause, Play, Plus, RotateCcw, Rotate3D, Sun, Moon, ScanFace
+  Box, Maximize2, Minimize2, MousePointer2,
+  Pause, Play, Plus, RotateCcw, RotateCw, Sun, Moon
 } from 'lucide-react';
 import { fileKind, formatBytes } from './vault';
 
@@ -185,7 +185,7 @@ export default function ModelStudio({ assets, activeId, onSelect, onImport }) {
 
             <div className="studio-toolbar" role="group" aria-label="Controles do visualizador">
               <button className={'studio-tool' + (autoRotate ? ' is-active' : '')} type="button" onClick={() => setAutoRotate(!autoRotate)} aria-pressed={autoRotate}>
-                <Rotate3D size={17} /><span>Giro automático</span>
+                <RotateCw size={17} /><span>Giro automático</span>
               </button>
               <button className="studio-tool" type="button" onClick={resetViewer}><RotateCcw size={17} /><span>Redefinir câmera</span></button>
               <button className={'studio-tool' + (lightBackground ? ' is-active' : '')} type="button" onClick={() => setLightBackground(!lightBackground)} aria-pressed={lightBackground}>
