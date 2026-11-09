@@ -137,6 +137,7 @@ export default function App() {
   const [studioFilmId, setStudioFilmId] = useState('');
   const [remoteFilm, setRemoteFilm] = useState(null);
   const [preferredNarrationId, setPreferredNarrationId] = useState('');
+  const [remoteNarration, setRemoteNarration] = useState(null);
   const [detailCategory, setDetailCategory] = useState('outros');
   const [detailProject, setDetailProject] = useState('');
   const [detailNotes, setDetailNotes] = useState('');
@@ -384,6 +385,11 @@ export default function App() {
   const executeMcpCommand = useCallback(async (command) => {
     const { type, payload = {} } = command;
     const target = payload.assetId ? assets.find((item) => item.id === payload.assetId) : null;
+    if (type === 'voice_generate') {
+      setRemoteNarration({ id: command.id, payload });
+      setTab('voice-studio');
+      return { deferred: true };
+    }
     if (type === 'open_asset') {
       if (!target) throw new Error('Arquivo não encontrado neste navegador.');
       if (fileKind(target) === '3d') { setStudioModelId(target.id); setTab('models'); }
@@ -608,7 +614,7 @@ export default function App() {
           {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} remoteCommand={remoteCamera} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
           {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} preferredAudioId={preferredNarrationId} />}
-          {tab === 'voice-studio' && <VoiceStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedNarration} onUseInFilm={(id) => { setPreferredNarrationId(id); setTab('film-studio'); }} />}
+          {tab === 'voice-studio' && <VoiceStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedNarration} onUseInFilm={(id) => { setPreferredNarrationId(id); setTab('film-studio'); }} remoteCommand={remoteNarration} />}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">
