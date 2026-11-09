@@ -59,6 +59,34 @@ Use **Backups → Baixar backup ZIP** com frequência e salve uma cópia em outr
 
 Para mostrar uma cena ou personagem do Blender no visualizador, exporte em **GLB** com materiais e texturas incorporados. Arquivos .blend, .fbx, .obj, cenas e outros formatos continuam guardados para download, mas não são abertos como modelos 3D interativos diretamente.
 
+## Diretor de Filmes 3D — renderização real no navegador
+
+O menu **Diretor de filmes 3D** agora produz vídeos originais, e não apenas arquivos de referência.
+
+1. Selecione **Diretor de filmes 3D** na barra lateral e crie um novo roteiro.
+2. Escolha **hamburgueria**, **cidade** ou **estúdio**, iluminação (dia/tarde/noite), proporção e duração.
+3. Ajuste os planos na linha do tempo. Cada plano possui ângulo de câmera, movimento, ação e texto.
+4. Clique em **Reproduzir** para pré-visualizar a animação feita em Three.js.
+5. Opcionalmente, escolha um **GLB importado** para filmar uma cena real do Blender, ou um áudio importado para compor a trilha.
+6. Selecione resolução 720p/1080p e clique em **PRODUZIR VÍDEO 3D**. Mantenha o navegador e a aba ativos durante a gravação.
+7. O arquivo gerado via WebGL, Canvas e MediaRecorder é salvo na **Biblioteca / Vídeos**. Ele também pode ser baixado. O formato MP4 ou WebM depende de codecs do navegador.
+
+O cenário incorporado contém rua com marcações coerentes, fachadas de lojas, fila, personagens articulados, tráfego, iluminação 3D e hambúrguer em exposição. Existe também um estúdio com pedestal e iluminação dedicada. O sistema produz movimentos 3D efetivos, sem substituí-los por slides estáticos.
+
+### Criar um vídeo a partir do ChatGPT
+
+Com o plugin **3D VP** conectado e um código de pareamento válido, use as ferramentas:
+
+- `criar_filme_3d` — envia um roteiro com múltiplos planos para a biblioteca do site.
+- `estado_comando` — verifica se o roteiro foi realmente salvo (precisa retornar `applied`).
+- `listar_filmes_3d` — encontra o ID do novo filme quando a sincronização completar.
+- `renderizar_filme_3d` — solicita a renderização do filme completo no navegador pareado.
+- `estado_comando` — só `applied` confirma que o vídeo foi gerado e salvo na biblioteca.
+
+A gravação exige uma sessão do site aberta e ativa e capacidade WebGL + MediaRecorder. A exportação depende dos recursos do dispositivo e do navegador. **Este MCP não executa Blender na nuvem, não converte arquivos .blend e não gera voz neural sozinho**; áudio externo pode ser importado e associado ao filme.
+
+Os roteiros de filmes agora entram nos **Backups ZIP**; o banco IndexedDB usa versão 2 para criar a coleção `films`, preservando as coleções anteriores.
+
 ## Integração MCP com ChatGPT
 
 O estúdio inclui um servidor **MCP Streamable HTTP** na URL:
@@ -74,7 +102,7 @@ O estúdio inclui um servidor **MCP Streamable HTTP** na URL:
 5. Instale o plugin e selecione-o com @ em uma conversa. Envie o código em um pedido como: **"Usando o plugin Vitor Productions, consulte meus arquivos com este código: ..."**
 6. Mantenha o site aberto para que ele receba os comandos (consultados aproximadamente a cada 15 segundos). Safari pode suspender abas em segundo plano.
 
-**Ferramentas:** `conexao_status`, `listar_arquivos`, `abrir_arquivo`, `ajustar_camera_3d`, `editar_video`, `estado_comando`. Os comandos são **enfileirados** e só podem ser considerados executados quando `estado_comando` retornar `applied` após confirmação do navegador.
+**Ferramentas:** `conexao_status`, `listar_arquivos`, `abrir_arquivo`, `ajustar_camera_3d`, `editar_video`, `listar_filmes_3d`, `criar_filme_3d`, `renderizar_filme_3d`, `estado_comando`. Os comandos são **enfileirados** e só podem ser considerados executados quando `estado_comando` retornar `applied` após confirmação do navegador.
 
 ### Arquitetura e segurança
 
