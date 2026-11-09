@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Film, Play, Pause, Download, Save, RotateCcw, Video, AlertCircle } from 'lucide-react';
 import { fileKind, downloadBlob } from './vault';
 import './studio.css';
+import '@google/model-viewer';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const formatTime = (seconds) => {
@@ -254,7 +255,7 @@ export default function Studio({ assets, onSaved, onUpload }) {
           audioRef.current = { context, destination };
         }
         await audioRef.current.context.resume();
-        audioRef.current.destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+        audioRef.current.destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track.clone()));
       } else {
         setMessage('Aviso: este navegador pode exportar sem o áudio original.');
       }
@@ -316,8 +317,8 @@ export default function Studio({ assets, onSaved, onUpload }) {
       <div className="studio-heading">
         <div><span className="studio-eyebrow">VITOR PRODUCTIONS / PRODUÇÃO</span><h1>Estúdio</h1><p>Visualize modelos 3D e faça edições reais nos seus vídeos, diretamente neste dispositivo.</p></div>
         <div className="studio-modes">
-          <button className={mode === 'video' ? 'active' : ''} onClick={() => setMode('video')}><Film size={17} /> Vídeo</button>
-          <button className={mode === 'model' ? 'active' : ''} onClick={() => setMode('model')}><Box size={17} /> 3D</button>
+          <button className={mode === 'video' ? 'active' : ''} disabled={exporting} onClick={() => setMode('video')}><Film size={17} /> Vídeo</button>
+          <button className={mode === 'model' ? 'active' : ''} disabled={exporting} onClick={() => setMode('model')}><Box size={17} /> 3D</button>
         </div>
       </div>
       <div className="studio-project-bar">
