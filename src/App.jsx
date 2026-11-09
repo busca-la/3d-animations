@@ -5,13 +5,14 @@ import {
   CloudOff, Database, Download, FileArchive, FileBox, FileVideo, Film, Bot,
   Folder, FolderOpen, HardDrive, Image as ImageIcon, Info, Layers3,
   LayoutDashboard, Menu, MoreHorizontal, PackageOpen, Plus, Search, ShieldCheck,
-  SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, WandSparkles, X
+  SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, WandSparkles, X, Mic2
 } from 'lucide-react';
 import { getAll, remove, save, saveMany, storageEstimate } from './db';
 import ModelStudio from './ModelStudio.jsx';
 import VideoStudio from './VideoStudio.jsx';
 import McpBridge from './McpBridge.jsx';
 import FilmStudio from './FilmStudio.jsx';
+import VoiceStudio from './VoiceStudio.jsx';
 import { sanitizeFilm } from './filmSchema.js';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
@@ -36,6 +37,7 @@ const NAV = [
   { id: 'models', label: 'Visualizador 3D', icon: Box },
   { id: 'video-editor', label: 'Editor de vídeo', icon: Clapperboard },
   { id: 'film-studio', label: 'Diretor de filmes 3D', icon: Film },
+  { id: 'voice-studio', label: 'Narração IA', icon: Mic2 },
   { id: 'mcp', label: 'ChatGPT MCP', icon: Bot },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
@@ -134,6 +136,7 @@ export default function App() {
   const [remoteCamera, setRemoteCamera] = useState(null);
   const [studioFilmId, setStudioFilmId] = useState('');
   const [remoteFilm, setRemoteFilm] = useState(null);
+  const [preferredNarrationId, setPreferredNarrationId] = useState('');
   const [detailCategory, setDetailCategory] = useState('outros');
   const [detailProject, setDetailProject] = useState('');
   const [detailNotes, setDetailNotes] = useState('');
@@ -339,6 +342,20 @@ export default function App() {
     await remove('films', id);
     if (studioFilmId === id) setStudioFilmId('__new__');
     await refresh();
+  }
+
+  async function saveGeneratedNarration({ blob, filename, text, voiceId }) {
+    if (!(blob instanceof Blob) || !/^audio\//.test(blob.type)) throw new Error('Arquivo de narração inválido.');
+    const record = {
+      id: makeId(), name: filename, mime: 'audio/wav', category: 'audio', projectId: '',
+      size: blob.size, createdAt: new Date().toISOString(), notes: 'Narração criada com IA local · Piper',
+      generatedBy: 'vp-native-piper', narrationText: String(text).slice(0, 3500),
+      narrationVoice: String(voiceId), blob,
+    };
+    await save('assets', record);
+    await refresh();
+    notice('Narração criada e salva na biblioteca.');
+    return record;
   }
 
   async function saveProducedVideo(blob, filename, film) {
@@ -590,7 +607,8 @@ export default function App() {
           {!offlineDemo && <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} films={films} onCommand={executeMcpCommand} />}
           {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} remoteCommand={remoteCamera} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
-          {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} />}
+          {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} preferredAudioId={preferredNarrationId} />}
+          {tab === 'voice-studio' && <VoiceStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedNarration} onUseInFilm={(id) => { setPreferredNarrationId(id); setTab('film-studio'); }} />}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">
