@@ -131,7 +131,7 @@ export default function VoiceStudio({ assets = [], onGenerated, onUseInFilm, sto
     };
     try {
       const wav = await generateNarration({
-        text: inputText, voiceId: selectedVoice, onProgress: update => {
+        text: inputText, voiceId: selectedVoice, cacheModel: storageAvailable, onProgress: update => {
           if (localRequest === latestRef.current) setProgress(update);
         },
       });
