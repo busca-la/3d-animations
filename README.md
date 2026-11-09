@@ -73,7 +73,7 @@ O menu **Narração IA** gera fala em português brasileiro com o motor aberto *
 
 **Vozes iniciais (pt-BR):**
 - **Faber** — `pt_BR-faber-medium` (voz masculina, modelo de qualidade média, licença CC0).
-- **Edresson** — `pt_BR-edresson-low` (voz masculina alternativa, qualidade leve, licença CC BY 4.0; atribuição ao projeto Piper e autores da voz no catálogo `diffusionstudio/piper-voices`).
+- **Jeff** — `pt_BR-edresson-low` (voz masculina alternativa, qualidade leve, licença CC BY 4.0; atribuição ao projeto Piper e autores da voz no catálogo `diffusionstudio/piper-voices`).
 
 O motor Piper e seu código são de código aberto. As vozes são modelos pré-treinados, não são vozes clonadas de outra empresa. Os arquivos originais do modelo podem exigir ~60 MB de download por voz e armazenamento adicional; máquinas lentas, abas privadas ou o Safari com armazenamento bloqueado podem impedir a síntese. Na primeira versão, a velocidade expressiva e a entonação dependem dos modelos — não prometemos equivalência com locuções comerciais. O **espanhol está planejado para a próxima etapa**, ainda não há interface de espanhol.
 
@@ -81,7 +81,7 @@ O motor Piper e seu código são de código aberto. As vozes são modelos pré-t
 
 Use a ferramenta **`gerar_narracao_ptbr`** do plugin 3D VP informando `pair_code`, `texto` e a voz `faber` (padrão) ou `edresson`. O comando é enfileirado, o estúdio precisa estar aberto na sessão pareada, e só `estado_comando` com `applied` confirma que o arquivo WAV foi salvo localmente. Não afirmar entrega quando a ferramenta retorna apenas `queued`.
 
-**Dependências:** `@mintplex-labs/piper-tts-web@1.0.5` (MIT), `onnxruntime-web@1.18.0` e vozes abertas de `diffusionstudio/piper-voices`. Os recursos WASM de fonemização são carregados de CDN pública na primeira utilização. Não inserir credenciais de terceiros no frontend.
+**Dependências:** `@jtsage/piper-tts-web@1.2.0` (MIT), `onnxruntime-web@1.22.0` e vozes abertas de `diffusionstudio/piper-voices`. Os recursos WASM de fonemização são carregados de CDN pública na primeira utilização. Não inserir credenciais de terceiros no frontend.
 
 ## Diretor de Filmes 3D — renderização real no navegador
 
