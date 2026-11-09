@@ -17,7 +17,9 @@
     "@vercel/blob": "^2.3.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "zod": "^3.25.76",
-    "three": "^0.183.0"
+    "three": "^0.183.0",
+    "onnxruntime-web": "1.22.0",
+    "@jtsage/piper-tts-web": "1.2.0"
   },
   "devDependencies": {
     "vite": "^6.3.5"

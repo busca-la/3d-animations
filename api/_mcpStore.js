@@ -107,7 +107,7 @@ export async function readCatalog(code) {
   return await readJson(pathOf(id, 'catalog.json')) || { assets: [], projects: [], films: [], syncedAt: null };
 }
 
-const COMMANDS = new Set(['open_asset', 'camera', 'video_edit', 'film_create', 'film_export', 'film_produce']);
+const COMMANDS = new Set(['open_asset', 'camera', 'video_edit', 'film_create', 'film_export', 'film_produce', 'voice_generate']);
 
 export async function queueCommand(code, type, payload) {
   const { id } = await authorize(code);
@@ -134,6 +134,17 @@ export async function queueCommand(code, type, payload) {
     }
     payload = { film: cleanFilm };
   }
+  if (type === 'voice_generate') {
+    const inputText = String(payload?.text || '').trim();
+    const voiceId = String(payload?.voiceId || 'pt_BR-faber-medium');
+    if (inputText.length < 4 || inputText.length > 3500) {
+      throw new Error('O texto da narração precisa ter entre 4 e 3500 caracteres.');
+    }
+    if (!['pt_BR-faber-medium', 'pt_BR-jeff-medium'].includes(voiceId)) {
+      throw new Error('Voz não suportada. Use Faber ou Jeff em português do Brasil.');
+    }
+    payload = { text: inputText, voiceId };
+  }
   const commandId = randomBytes(12).toString('hex');
   const command = { id: commandId, type, payload, createdAt: new Date().toISOString() };
   await writeNew(pathOf(id, 'commands/' + commandId + '.json'), command);
@@ -149,7 +160,12 @@ export async function listPending(code, seen = [], clientVersion = '') {
     .sort((a, b) => new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime())
     .slice(0, 15);
   const commands = (await Promise.all(files.map((blob) => readJson(blob.pathname)))).filter(Boolean)
-    .filter((command) => clientVersion === 'vp3d-film-v1' || !['film_create', 'film_export', 'film_produce'].includes(command.type));
+    .filter((command) => {
+      const filmCommands = ['film_create', 'film_export', 'film_produce'];
+      if (command.type === 'voice_generate') return clientVersion === 'vp3d-voice-v1';
+      if (filmCommands.includes(command.type)) return ['vp3d-film-v1', 'vp3d-voice-v1'].includes(clientVersion);
+      return true;
+    });
   return { commands };
 }
 

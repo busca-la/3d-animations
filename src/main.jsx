@@ -5,6 +5,7 @@ import './styles.css';
 import './studios.css';
 import './mcp.css';
 import './film.css';
+import './voice.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode><App /></React.StrictMode>
