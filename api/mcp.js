@@ -185,13 +185,13 @@ function createServer() {
     inputSchema: {
       pair_code: codeSchema,
       texto: z.string().min(4).max(3500).describe('Texto que será narrado em português brasileiro, no máximo 3500 caracteres.'),
-      voz: z.enum(['faber', 'edresson']).optional().default('faber').describe('Faber: voz masculina brasileira média. Edresson: alternativa masculina mais leve.'),
+      voz: z.enum(['faber', 'jeff']).optional().default('faber').describe('Faber: voz masculina brasileira média. Jeff: segunda voz masculina brasileira de qualidade média.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
   }, async ({ pair_code, texto, voz }) => safely(async () => {
     const result = await queueCommand(pair_code, 'voice_generate', {
       text: texto,
-      voiceId: voz === 'edresson' ? 'pt_BR-edresson-low' : 'pt_BR-faber-medium',
+      voiceId: voz === 'jeff' ? 'pt_BR-jeff-medium' : 'pt_BR-faber-medium',
     });
     return { ...result, note: 'A narração foi enfileirada, mas NÃO está pronta. Deixe o site aberto, aguarde o modelo local e confirme applied em estado_comando. O WAV aparece no Estúdio de Narração e na biblioteca local.' };
   }));
