@@ -117,7 +117,7 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
       if (!active || busy) return;
       busy = true;
       try {
-        const { commands } = await callBridge('poll', { seen: [...seen.current].slice(-150), client_version: 'vp3d-voice-v1' });
+        const { commands } = await callBridge('poll', { seen: [...seen.current].slice(-150), client_version: 'vp3d-city-v1' });
         if (!active) return;
         setConnection('connected');
         for (const command of commands || []) {
@@ -243,6 +243,7 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
         <div className="mcp-feature"><Check size={16} /><span>Salvar cortes, formato, zoom e texto do vídeo</span></div>
         <div className="mcp-feature"><Check size={16} /><span>Criar roteiros e renderizar filmes 3D em vídeo pela conversa</span></div>
         <div className="mcp-feature"><Check size={16} /><span>Gerar narrações brasileiras em WAV usando o motor Piper do site</span></div>
+        <div className="mcp-feature"><Check size={16} /><span>Gerar cidades 3D por descrição e salvar o arquivo GLB para filmagens</span></div>
         <div className="mcp-rule"><LockKeyhole size={17} /><p>Os arquivos de vídeo e modelos originais <b>continuam no navegador</b>. Só os nomes, IDs e comandos são enviados à nuvem privada.</p></div>
         <div className="mcp-rule"><CircleHelp size={17} /><p>Deixe este site aberto e conectado para executar comandos. Exportação de vídeo, edição interna de malhas 3D e renderização Blender não são automáticas.</p></div>
       </aside>
