@@ -39,6 +39,7 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [engineState, setEngineState] = useState('loading');
+  const [engineSignature, setEngineSignature] = useState('');
   const [error, setError] = useState('');
   const [renderState, setRenderState] = useState('');
   const [resolution, setResolution] = useState(720);
@@ -73,7 +74,7 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
     if (renderBusy.current) return undefined;
     let active = true;
     let loaded = null;
-    setEngineState('loading'); setError('');
+    setEngineState('loading'); setEngineSignature(''); setError('');
     const start = async () => {
       try {
         const { createFilmEngine } = await import('./filmEngine.js');
@@ -84,6 +85,7 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
         const sizes = previewSizes(draft.format);
         instance.resize(...sizes);
         instance.render(timelineRef.current.position);
+        setEngineSignature(draftJSON);
         setEngineState('ready');
       } catch (e) { if (active) { setError(e.message); setEngineState('error'); } }
     };
@@ -186,7 +188,10 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
       engine.render(0);
       mediaStream = canvasRef.current.captureStream(sourceFilm.fps);
       let inputStream = mediaStream;
-      if (window.AudioContext || window.webkitAudioContext) {
+      // Uma chamada MCP não possui gesto de clique: no Safari, AudioContext.resume()
+      // pode ficar suspenso indefinidamente. Grave o vídeo sem áudio nesta situação,
+      // em vez de deixar a renderização presa na fila.
+      if (!remoteId && (window.AudioContext || window.webkitAudioContext)) {
         try {
           const Ctx = window.AudioContext || window.webkitAudioContext;
           audioContext = new Ctx();
@@ -271,11 +276,21 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
 
   useEffect(() => {
     if (!remoteCommand?.id || remoteCommand.id === lastRemote.current) return;
-    if (remoteCommand.payload?.filmId !== (selectedFilm?.id || draft.id)) return;
-    if (renderBusy.current || engineState !== 'ready') return;
+    // Aguarde o roteiro selecionado ser efetivamente carregado no motor WebGL.
+    // Não renderize a cena padrão por engano antes de o filme remoto ser montado.
+    if (remoteCommand.payload?.filmId !== draft.id) return;
+    if (renderBusy.current) return;
+    if (engineState === 'error') {
+      lastRemote.current = remoteCommand.id;
+      window.dispatchEvent(new CustomEvent('vp3d-remote-command-done', {
+        detail: { id: remoteCommand.id, status: 'failed', reason: error || 'Motor 3D indisponível.' },
+      }));
+      return;
+    }
+    if (engineState !== 'ready' || engineSignature !== draftJSON || !engineRef.current) return;
     lastRemote.current = remoteCommand.id;
     exportVideo({ remoteId: remoteCommand.id });
-  }, [remoteCommand?.id, engineState, selectedFilm?.id, draft.id]);
+  }, [remoteCommand?.id, engineState, engineSignature, draftJSON, draft.id, error]);
 
   const seconds = (value) => Number(value).toFixed(1) + 's';
   const selected = draft.shots[selectedShot] || draft.shots[0];
