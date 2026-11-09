@@ -256,7 +256,7 @@ export default function VoiceStudio({ assets = [], onGenerated, onUseInFilm, sto
           <div className="voice-section-heading"><h2>Biblioteca de vozes</h2><span className="voice-history-count">{saved.length}</span></div>
           {saved.length ? <div className="voice-history-list">
             {saved.slice(0, 8).map(asset => <button className="voice-history-item" key={asset.id} disabled={generating} onClick={() => loadSaved(asset)}>
-              <span className="voice-history-icon"><FileAudio size={17}/></span><span><strong>{asset.name}</strong><small>{formatDate(asset.createdAt)} · {asset.narrationVoice === 'pt_BR-faber-medium' ? 'Faber' : 'Edresson'}</small></span><Play size={14}/>
+              <span className="voice-history-icon"><FileAudio size={17}/></span><span><strong>{asset.name}</strong><small>{formatDate(asset.createdAt)} · {asset.narrationVoice === 'pt_BR-faber-medium' ? 'Faber' : 'Jeff'}</small></span><Play size={14}/>
             </button>)}
           </div> : <p className="voice-history-empty">Suas narrações salvas aparecerão aqui.</p>}
         </section>
