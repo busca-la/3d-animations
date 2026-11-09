@@ -10,6 +10,7 @@ import {
 import { getAll, remove, save, saveMany, storageEstimate } from './db';
 import ModelStudio from './ModelStudio.jsx';
 import VideoStudio from './VideoStudio.jsx';
+import FilmStudio from './FilmStudio.jsx';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
   formatBytes, formatDate, makeBackup, makeId, parseBackup
@@ -32,6 +33,7 @@ const NAV = [
   { id: 'library', label: 'Biblioteca', icon: Layers3 },
   { id: 'models', label: 'Visualizador 3D', icon: Box },
   { id: 'video-editor', label: 'Editor de vídeo', icon: Clapperboard },
+  { id: 'film-studio', label: 'Criar curta 3D', icon: Film },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
 ];
@@ -276,6 +278,16 @@ export default function App() {
     await refresh();
   }
 
+  async function createFilm(blob, name) {
+    if (!(blob instanceof Blob) || blob.size === 0) throw new Error('O vídeo não foi gerado.');
+    const item = { id: makeId(), name, mime: blob.type || 'video/webm', category: 'videos', projectId: '', size: blob.size, createdAt: new Date().toISOString(), notes: 'Produção original: O cliente que passou direto. Curta 3D procedural.', blob };
+    await save('assets', item);
+    await refresh();
+    setStudioVideoId(item.id);
+    setTab('video-editor');
+    notice('Curta salvo. Agora você pode editar e exportar o arquivo.');
+  }
+
   function openInStudio(asset) {
     if (fileKind(asset) === '3d') {
       setStudioModelId(asset.id);
@@ -410,6 +422,7 @@ export default function App() {
         </header>
 
         <main className="main-content">
+          {tab === 'film-studio' && <FilmStudio onGenerated={createFilm} />}
           {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
           {tab === 'overview' && <>
