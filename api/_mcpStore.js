@@ -140,8 +140,8 @@ export async function queueCommand(code, type, payload) {
     if (inputText.length < 4 || inputText.length > 3500) {
       throw new Error('O texto da narração precisa ter entre 4 e 3500 caracteres.');
     }
-    if (!['pt_BR-faber-medium', 'pt_BR-edresson-low'].includes(voiceId)) {
-      throw new Error('Voz não suportada. Use Faber ou Edresson em português do Brasil.');
+    if (!['pt_BR-faber-medium', 'pt_BR-jeff-medium'].includes(voiceId)) {
+      throw new Error('Voz não suportada. Use Faber ou Jeff em português do Brasil.');
     }
     payload = { text: inputText, voiceId };
   }
