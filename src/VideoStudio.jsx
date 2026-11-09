@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Clapperboard, Film, Pause, Play, Plus, Save, Scissors, Download, Volume2, WandSparkles } from 'lucide-react';
+import { Clapperboard, Film, Pause, Play, Plus, Save, Scissors, Download } from 'lucide-react';
 import { fileKind, formatBytes } from './vault';
 
 const INITIAL = {
@@ -132,6 +132,7 @@ export default function VideoStudio({ assets, activeId, onSelect, onImport, onSa
     setAspectOriginal((v.videoWidth || 16) + ' / ' + (v.videoHeight || 9));
     const initialStart = clamp(settings.start, 0, d);
     v.currentTime = initialStart;
+    v.playbackRate = settings.speed;
     setTime(initialStart);
   }
   function onTimeUpdate(event) {
@@ -160,12 +161,12 @@ export default function VideoStudio({ assets, activeId, onSelect, onImport, onSa
   function changeStart(value) {
     const next = clamp(Number(value), 0, Math.max(0, end - 0.1));
     patch({ start: next });
-    if (videoRef.current && videoRef.current.currentTime < next) seek(next);
+    if (videoRef.current && videoRef.current.currentTime < next) { videoRef.current.currentTime = next; setTime(next); }
   }
   function changeEnd(value) {
     const next = clamp(Number(value), start + 0.1, duration);
     patch({ end: next });
-    if (videoRef.current && videoRef.current.currentTime > next) seek(next);
+    if (videoRef.current && videoRef.current.currentTime > next) { videoRef.current.currentTime = next; setTime(next); }
   }
   async function saveChanges() {
     if (!selected) return;
