@@ -140,7 +140,7 @@ export async function queueCommand(code, type, payload) {
   return { commandId, status: 'queued', note: 'Ação enviada. O site precisa estar aberto e pareado para executá-la.' };
 }
 
-export async function listPending(code, seen = []) {
+export async function listPending(code, seen = [], clientVersion = '') {
   const { id } = await authorize(code);
   const known = new Set(Array.isArray(seen) ? seen.slice(-150) : []);
   const result = await list({ prefix: pathOf(id, 'commands/'), limit: 100 });
@@ -148,7 +148,8 @@ export async function listPending(code, seen = []) {
     .filter((blob) => !known.has(blob.pathname.split('/').pop().replace('.json', '')))
     .sort((a, b) => new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime())
     .slice(0, 15);
-  const commands = (await Promise.all(files.map((blob) => readJson(blob.pathname)))).filter(Boolean);
+  const commands = (await Promise.all(files.map((blob) => readJson(blob.pathname)))).filter(Boolean)
+    .filter((command) => clientVersion === 'vp3d-film-v1' || !['film_create', 'film_export', 'film_produce'].includes(command.type));
   return { commands };
 }
 
