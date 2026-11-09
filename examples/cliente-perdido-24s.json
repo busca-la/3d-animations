@@ -1,0 +1,62 @@
+{
+  "id": "vp-cidade-npc-narrado-20261109",
+  "title": "O CLIENTE QUE VOCÊ PERDEU SEM PERCEBER",
+  "scene": "hamburgueria",
+  "mood": "tarde",
+  "format": "9:16",
+  "duration": 24,
+  "fps": 30,
+  "accent": "#e6a14a",
+  "narration": "Um cliente passou pela sua loja. E você nem percebeu. Do outro lado, uma hamburgueria estava cheia. Ele olhou para aquela fila e pensou: se tanta gente escolheu esse lugar, deve ser bom. Antes mesmo de experimentar, ele já tinha decidido. Não era só o hambúrguer. Era a percepção.",
+  "shots": [
+    {
+      "duration": 3,
+      "camera": "abertura",
+      "action": "trafego",
+      "text": "UM CLIENTE PASSOU POR AQUI.",
+      "move": 0.9
+    },
+    {
+      "duration": 3,
+      "camera": "rua",
+      "action": "caminhar",
+      "text": "E VOCÊ NEM PERCEBEU.",
+      "move": 0.85
+    },
+    {
+      "duration": 4,
+      "camera": "fachada",
+      "action": "parar",
+      "text": "ELE VIU UMA FILA.",
+      "move": 0.8
+    },
+    {
+      "duration": 4,
+      "camera": "personagem",
+      "action": "olhar",
+      "text": "ONDE VOCÊ ENTRARIA?",
+      "move": 0.4
+    },
+    {
+      "duration": 3,
+      "camera": "alto",
+      "action": "trafego",
+      "text": "ANTES DE PROVAR, ELE ESCOLHEU.",
+      "move": 0.8
+    },
+    {
+      "duration": 4,
+      "camera": "produto",
+      "action": "produto",
+      "text": "NÃO ERA SÓ O HAMBÚRGUER.",
+      "move": 0.8
+    },
+    {
+      "duration": 3,
+      "camera": "travelling",
+      "action": "celebrar",
+      "text": "ERA A PERCEPÇÃO.",
+      "move": 0.9
+    }
+  ]
+}
