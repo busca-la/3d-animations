@@ -1,3 +1,11 @@
+## Minha conta — autenticação Google / Supabase
+
+A seção **Minha conta** foi adicionada ao 3D Studio, preparada para login com Google via Supabase Auth (OAuth 2.0 + PKCE), verificação de sessão, exibição de usuário e logout. É uma integração **opcional e segura**: na ausência de `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` o site não tenta autenticar nem inventa dados de clientes. O editor e a biblioteca local continuam disponíveis.
+
+A conexão Supabase fornecida no ChatGPT ainda não tem nenhum projeto acessível. Por isso o login não está ligado a uma instância real e a tela informa exatamente o que falta. Não há tabela de usuários paga, cobrança recorrente, venda de assinaturas ou sincronização automática de arquivos.
+
+**Configuração e passos de ativação:** `docs/SUPABASE_AUTH.md` e `.env.example`.
+
 # Vitor Productions — 3D Vault
 
 Uma biblioteca visual, responsiva e **local-first** para guardar e organizar projetos 3D, personagens, cenários, animações, áudio, vídeo e arquivos originais de produção.
