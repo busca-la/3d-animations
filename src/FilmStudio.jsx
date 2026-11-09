@@ -33,7 +33,7 @@ function makeSfx(ctx, dest, t, pitch = 320) {
   osc.connect(gain); gain.connect(dest); osc.start(t); osc.stop(t + .24);
 }
 
-export default function FilmStudio({ films, assets, activeId, onSelect, onSave, onDelete, onProduced, remoteCommand }) {
+export default function FilmStudio({ films, assets, activeId, onSelect, onSave, onDelete, onProduced, remoteCommand, preferredAudioId = '' }) {
   const selectedFilm = activeId === '__new__' ? null : (films.find((item) => item.id === activeId) || films[0] || null);
   const [draft, setDraft] = useState(() => sanitizeFilm(demoFilm()));
   const [playing, setPlaying] = useState(false);
@@ -68,6 +68,14 @@ export default function FilmStudio({ films, assets, activeId, onSelect, onSave, 
     setSelectedShot(0);
     setLastOutput(null);
   }, [selectedFilm?.id]);
+
+  useEffect(() => {
+    if (!preferredAudioId) return;
+    if (!assets.some(asset => asset.id === preferredAudioId && fileKind(asset) === 'audio')) return;
+    setDraft(current => current.audioAssetId === preferredAudioId ? current :
+      sanitizeFilm({ ...current, audioAssetId: preferredAudioId }));
+    setRenderState('Narração importada do Estúdio de Voz. Salve o roteiro para reutilizá-la.');
+  }, [preferredAudioId, selectedFilm?.id, assets]);
 
   // Cria o WebGL somente quando muda o roteiro / arquivo 3D, mantendo o preview dentro do site.
   useEffect(() => {
