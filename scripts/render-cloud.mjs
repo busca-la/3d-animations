@@ -83,7 +83,7 @@ inputArgs.push('-i', sfxPath);
 const vfilter = '[0:v]scale=' + exportWidth + ':' + exportHeight +
   ':flags=lanczos,fps=' + fps + ',format=yuv420p[v]';
 const audioFilter = voicePath
-  ? '[1:a]volume=1.04[voice];[2:a]volume=.85[fx];[voice][fx]amix=inputs=2:duration=longest:normalize=0,apad,atrim=duration=' + duration + '[a]'
+  ? '[1:a]volume=1.04[voice];[2:a]volume=.85[fx];[voice][fx]amix=inputs=2:duration=longest,apad,atrim=duration=' + duration + '[a]'
   : '[1:a]volume=.85,apad,atrim=duration=' + duration + '[a]';
 inputArgs.push('-filter_complex', vfilter + ';' + audioFilter,
   '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'veryfast',
