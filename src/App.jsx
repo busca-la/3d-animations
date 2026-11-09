@@ -25,9 +25,12 @@ const CATEGORY_ICONS = {
   outros: Archive,
 };
 
+const Studio = React.lazy(() => import('./Studio.jsx'));
+
 const NAV = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'library', label: 'Biblioteca', icon: Layers3 },
+  { id: 'studio', label: 'Estúdio', icon: Clapperboard },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
 ];
@@ -386,6 +389,16 @@ export default function App() {
         </header>
 
         <main className="main-content">
+          {tab === 'studio' && <React.Suspense fallback={<div className="studio-loading">Carregando estúdio…</div>}>
+            <Studio assets={assets} onUpload={() => openUpload()} onSaved={async (blob, filename) => {
+              await save('assets', {
+                id: makeId(), name: filename, mime: blob.type, category: 'videos',
+                projectId: '', size: blob.size, createdAt: new Date().toISOString(),
+                notes: 'Exportado pelo Estúdio de Vídeo', blob
+              });
+              await refresh();
+            }} />
+          </React.Suspense>}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">
