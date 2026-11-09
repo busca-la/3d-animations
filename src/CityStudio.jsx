@@ -163,6 +163,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
     setError(''); setStatus('');setResult(null);setSavedId('');
     try {
       const next=safePlan(description,choices);
+      setState('loading');
       setSpec(next);
       setPrompt(next.prompt);
       setOverrides(choices);
@@ -181,7 +182,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
     };
     try {
       const world=worldRef.current?.world;
-      if(!world)throw Error('O cenário 3D ainda não está pronto.');
+      if(!world || JSON.stringify(world.spec)!==specKey) throw Error('A nova cidade ainda está sendo montada. Aguarde o cenário aparecer antes de salvar.');
       const {GLTFExporter}=await import('three/addons/exporters/GLTFExporter.js');
       const exporter=new GLTFExporter();
       const exported=await exporter.parseAsync(world.root,{binary:true,maxTextureSize:1024,onlyVisible:true});
@@ -215,7 +216,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
     // O comando é interpretado no cliente, sem execução arbitrária de JS.
     lastRemote.current=remoteCommand.id;
     const next=safePlan(remoteCommand.payload?.prompt||START_PROMPT);
-    setSpec(next);setPrompt(next.prompt);setOverrides({});
+    setState('loading'); setSpec(next);setPrompt(next.prompt);setOverrides({});
     // A exportação automática acontece após o novo renderizador carregar.
     generatedId.current=remoteCommand.id;
   },[remoteCommand?.id,state]);
