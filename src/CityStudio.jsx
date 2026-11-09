@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight, Blocks, Building2, Check, CircleAlert, CloudOff, Compass,
   Download, FileBox, Film, MapPin, RotateCcw, Save, Sparkles,
-  Trees, WandSparkles, Layers3, CarFront, Sun, Moon, CloudRain,
+  Trees, WandSparkles, Layers3, CarFront, Sun, Moon, CloudRain, Mic, MicOff,
 } from 'lucide-react';
 import { CITY_PRESETS, cityName, interpretCityPrompt } from './cityPrompt.js';
 import { downloadBlob, fileKind, formatBytes } from './vault';
@@ -24,6 +24,8 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef(null);
   const [result, setResult] = useState(null);
   const [savedId, setSavedId] = useState('');
   const canvasRef = useRef(null);
@@ -111,6 +113,51 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
       renderer?.forceContextLoss?.();
     };
   },[specKey]);
+
+  useEffect(() => () => { recognitionRef.current?.abort?.(); }, []);
+
+  function speakCity() {
+    if (listening) {
+      recognitionRef.current?.stop?.();
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError('O Safari deste dispositivo não disponibiliza reconhecimento de voz. Você pode descrever a cidade digitando.');
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.lang = 'pt-BR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = (event) => {
+        const transcript = [...event.results].map(r => r[0]?.transcript || '').join(' ').trim();
+        if (transcript.length < 8) {
+          setError('Não entendi a descrição da cidade. Tente novamente com mais detalhes.');
+          return;
+        }
+        setPrompt(transcript);
+        generate(transcript, {});
+      };
+      recognition.onerror = (event) => {
+        const message = event.error === 'not-allowed' || event.error === 'service-not-allowed'
+          ? 'O navegador não autorizou o microfone. Permita a gravação ou digite a descrição.'
+          : 'Não foi possível reconhecer a fala: ' + (event.error || 'erro desconhecido');
+        setError(message);
+        setListening(false);
+      };
+      recognition.onend = () => { setListening(false); recognitionRef.current = null; };
+      recognition.start();
+      setError('');
+      setListening(true);
+    } catch (error) {
+      setListening(false);
+      setError('Não foi possível ativar o microfone: ' + error.message);
+    }
+  }
 
   function generate(description=prompt, choices=overrides) {
     setError(''); setStatus('');setResult(null);setSavedId('');
@@ -227,9 +274,15 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
           <label>Detalhamento<select value={overrides.blocks||''} onChange={e=>setOverrides(o=>({...o,blocks:e.target.value||undefined}))}>
             <option value="">Automático</option><option value="2">Bairro pequeno</option><option value="3">Distrito médio</option><option value="4">Distrito grande</option></select></label>
         </div>
-        <button className="city-generate" onClick={()=>generate()} disabled={state==='loading'||exporting}>
-          <WandSparkles size={18}/> GERAR CIDADE 3D
-        </button>
+        <div className="city-generate-actions">
+          <button className="city-generate" onClick={()=>generate()} disabled={state==='loading'||exporting}>
+            <WandSparkles size={18}/> GERAR CIDADE 3D
+          </button>
+          <button className={'city-microphone'+(listening?' is-listening':'')} aria-label={listening?'Parar gravação da cidade':'Descrever cidade pelo microfone'} title={listening?'Parar gravação':'Falar como quero a cidade'} onClick={speakCity}>
+            {listening?<MicOff size={19}/>:<Mic size={19}/>}
+          </button>
+        </div>
+        {listening&&<p className="city-speech-status" role="status">Ouvindo a descrição… A cidade será construída assim que você terminar de falar.</p>}
         <div className="city-divider"/>
         <div className="city-section-heading"><h2>Exportar cidade</h2><small>Modelo GLB, compatível com o nosso editor.</small></div>
         <button className="city-export" onClick={()=>exportCity()} disabled={state!=='ready'||exporting}>
@@ -239,7 +292,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
         {savedId&&<button className="city-film" onClick={()=>onUseInFilm?.(savedId)}><Film size={16}/> Usar esta cidade no filme <ArrowRight size={15}/></button>}
         {error&&<p className="city-error" role="alert"><CircleAlert size={16}/>{error}</p>}
         {status&&<p className="city-status" role="status">{status}</p>}
-        <p className="city-disclaimer">A primeira versão utiliza geração procedural interpretando o texto, não um modelo de linguagem externo. As cidades são editáveis, originais e utilizáveis no 3D Studio. Modelos muito grandes podem exigir mais memória no Safari.</p>
+        <p className="city-disclaimer">A primeira versão utiliza geração procedural interpretando texto ou voz transcrita pelo navegador, não um modelo de linguagem externo. O reconhecimento de fala pode usar serviços do próprio navegador. As cidades são editáveis, originais e utilizáveis no 3D Studio. Modelos muito grandes podem exigir mais memória no Safari.</p>
       </div>
     </div>
     <section className="city-library">
