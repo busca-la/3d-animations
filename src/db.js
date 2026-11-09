@@ -1,5 +1,5 @@
 const DB_NAME = 'vp3d-vault-v1';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let databasePromise;
 
 function database() {
@@ -17,6 +17,9 @@ function database() {
         }
         if (!db.objectStoreNames.contains('assets')) {
           db.createObjectStore('assets', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('films')) {
+          db.createObjectStore('films', { keyPath: 'id' });
         }
       };
       request.onsuccess = () => resolve(request.result);
