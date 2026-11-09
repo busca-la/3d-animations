@@ -59,6 +59,36 @@ Use **Backups → Baixar backup ZIP** com frequência e salve uma cópia em outr
 
 Para mostrar uma cena ou personagem do Blender no visualizador, exporte em **GLB** com materiais e texturas incorporados. Arquivos .blend, .fbx, .obj, cenas e outros formatos continuam guardados para download, mas não são abertos como modelos 3D interativos diretamente.
 
+## Cidade IA — gerador de cidades 3D por descrição
+
+O menu **Cidade IA** cria uma cidade 3D diretamente no Vitor Productions 3D Studio a partir de texto livre em português ou de ditado por microfone (quando o navegador suporta Web Speech API). **A v1 é geração procedural com interpretação de texto por regras locais, não é um LLM nem um serviço externo que desenha objetos arbitrários**. Ela suporta conceitos urbanos limitados e gera geometria real controlável pelo usuário. Sem compra de créditos ou chamada a APIs pagas.
+
+**Entrar:** `https://3d-animations-eta.vercel.app/?studio=city-studio`
+
+### Fluxo de geração
+
+1. Digite algo como: “bairro comercial à noite, prédios altos, hambúrgueria na esquina, cafeteira, praça, tráfego moderado” ou use o botão de microfone para ditar em português brasileiro.
+2. O compilador `src/cityPrompt.js` transforma a descrição numa especificação controlada: distrito, arquitetura, horário, tempo, densidade, altura, comércio e trânsito. Os presets e seletores permitem ajustes sem código.
+3. O motor `src/cityWorld.js` gera uma malha de ruas e quarteirões conectados; os veículos trafegam pelas ruas e pedestres andam pelas calçadas. Calçadas, faixas de pedestre, vitrines, portas, bancos, árvores, semáforos e fachadas têm geometria 3D própria.
+4. O usuário pode girar/afastar/aproximar a câmera com `OrbitControls`, e gerar variações repetidamente.
+5. **Salvar cidade 3D** serializa o cenário para **GLB binário**, salva na biblioteca IndexedDB quando disponível e oferece download para backup. O botão **Usar esta cidade no filme** seleciona o modelo no Diretor de Filmes 3D.
+6. No Safari com a biblioteca indisponível, ainda é possível gerar e baixar GLB no modo de recuperação; nenhum dado existente é apagado.
+
+**Gerar pela conversa:** a ferramenta MCP **`gerar_cidade_3d`** aceita `pair_code` e `descricao` (8–1500 caracteres), abre o editor no navegador pareado e salva o GLB. O retorno `queued` significa somente solicitação pendente: o arquivo só existe após `estado_comando` indicar `applied`.
+
+**Limitações:** as construções seguem arquétipos e regras, não reconstruções fiéis de cidades reais. O modelo atual oferece bairros com até 4×4 quarteirões por cena. O microfone depende do reconhecimento de voz do dispositivo/navegador, que pode enviar áudio ao serviço do navegador; use o teclado se quiser evitar esse processamento externo. A renderização 3D ocorre localmente no dispositivo do usuário. Nenhum preço ou depoimento de clientes foi inventado.
+
+## Planos de assinatura e comercialização
+
+A área **Assinaturas** apresenta as opções Explorador/Beta, Creator e Studio; não finge cobranças nem disponibiliza pagamentos que não existem. Os preços estão intencionalmente em aberto. **Ainda não há usuários com autenticação central, controle de direitos de acesso em servidor, cobrança recorrente ou webhooks de pagamento.** A área comercial serve como preparação, não como checkout. Para lançar assinaturas pagas é necessário:
+
+- Configurar identidade dos clientes com autenticação segura, dados isolados por conta e política de privacidade.
+- Integrar provedor de pagamentos sob responsabilidade de um titular legal/empresa, usando preços, impostos e periodicidade aprovados.
+- Criar checkout autenticado, webhooks idempotentes, cancelamento, portal de cobrança e controle de planos/limites **no servidor**. Nunca confiar apenas em localStorage, botões desabilitados ou contadores do navegador.
+- Testar fluxo ponta a ponta em modo sandbox do provedor antes da cobrança pública, e validar política de reembolso, impostos, termos e idade do responsável.
+
+**Não inserir chaves Stripe, tokens ou credenciais no frontend**; não aceitar pagamentos reais até existir infraestrutura e autorização apropriadas.
+
 ## Estúdio de Narração IA — português brasileiro (sem ElevenLabs)
 
 O menu **Narração IA** gera fala em português brasileiro com o motor aberto **Piper/VITS** no próprio navegador, usando inferência WebAssembly/ONNX Runtime. Não utiliza a conta ElevenLabs, não necessita de chave de API, não cobra créditos por geração e não envia o texto do roteiro a um serviço comercial de TTS.
