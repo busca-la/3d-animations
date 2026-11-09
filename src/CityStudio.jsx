@@ -7,20 +7,22 @@ import {
 import { CITY_PRESETS, cityName, interpretCityPrompt } from './cityPrompt.js';
 import { downloadBlob, fileKind, formatBytes } from './vault';
 
-const START_PROMPT = CITY_PRESETS[0].text;
+const START_PROMPT = '';
 const OPTIONS = {
   district: [['comercial','Comercial'],['residencial','Residencial'],['industrial','Industrial']],
   style: [['moderno','Moderno'],['retro','Retrô'],['futurista','Futurista']],
   time: [['dia','Dia'],['tarde','Fim de tarde'],['noite','Noite']],
   density: [['baixa','Baixa'],['media','Média'],['alta','Alta']],
 };
-const safePlan = (prompt, overrides = {}) => interpretCityPrompt(prompt, overrides);
+const safePlan = (prompt, overrides = {}, variant = 0) => interpretCityPrompt(prompt, overrides, variant);
 
 export default function CityStudio({ assets = [], onGenerated, onUseInFilm, storageAvailable = true, remoteCommand = null }) {
   const [prompt, setPrompt] = useState(START_PROMPT);
   const [overrides, setOverrides] = useState({});
-  const [spec, setSpec] = useState(() => safePlan(START_PROMPT));
-  const [state, setState] = useState('loading');
+  const [spec, setSpec] = useState(null);
+  const [state, setState] = useState('idle');
+  const [stage, setStage] = useState('');
+  const variantRef = useRef(0);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -34,10 +36,11 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
   const controlRef = useRef(null);
   const generatedId = useRef('');
   const lastRemote = useRef('');
-  const specKey = JSON.stringify(spec);
+  const specKey = spec ? JSON.stringify(spec) : 'idle';
   const cityAssets = useMemo(() => assets.filter(a => a.generator === 'vp-city-v1' && a.blob && fileKind(a) === '3d'), [assets]);
 
   useEffect(() => {
+    if(!spec) return undefined;
     let active = true;
     let controller;
     let renderer;
@@ -46,12 +49,17 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
     let latest=0;
     let frame;
     async function start(){
-      setError(''); setState('loading');
+      setError(''); setState('loading');setStage('Preparando geometria da nova cidade…');
       try {
         const [THREE, orbit, engine] = await Promise.all([
           import('three'), import('three/addons/controls/OrbitControls.js'), import('./cityWorld.js'),
         ]);
         if(!canvasRef.current) return;
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        if(!active)return;
+        setStage('Montando avenidas, quarteirões, edifícios e objetos solicitados…');
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        if(!active)return;
         world = engine.createCityWorld(spec);
         if(!active){world.dispose();return;}
         renderer = new THREE.WebGLRenderer({canvas:canvasRef.current,antialias:true,powerPreference:'high-performance'});
@@ -98,7 +106,9 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
           renderer.render(world.scene,camera);
         };
         animate(performance.now());
+        setStage('');
         setState('ready');
+        setStatus('Cidade criada a partir do seu texto, pronta para explorar e salvar em GLB.');
       } catch(e){if(active){setError(e.message);setState('failed');}}
     }
     const timer=window.setTimeout(start,90);
@@ -162,13 +172,14 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
   function generate(description=prompt, choices=overrides) {
     setError(''); setStatus('');setResult(null);setSavedId('');
     try {
-      const next=safePlan(description,choices);
+      const next=safePlan(description,choices,++variantRef.current);
       setState('loading');
       setSpec(next);
       setPrompt(next.prompt);
       setOverrides(choices);
       generatedId.current = '';
-      setStatus('Cidade gerada. Gire com o mouse, aproxime e salve em GLB.');
+      setStage('Interpretando a descrição que você escreveu…');
+      setStatus('');
     } catch(e){setError(e.message);}
   }
 
@@ -212,11 +223,11 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
 
   useEffect(()=>{
     if(!remoteCommand?.id || remoteCommand.id===lastRemote.current)return;
-    if(state!=='ready')return;
+    if(state==='loading')return;
     // O comando é interpretado no cliente, sem execução arbitrária de JS.
     lastRemote.current=remoteCommand.id;
-    const next=safePlan(remoteCommand.payload?.prompt||START_PROMPT);
-    setState('loading'); setSpec(next);setPrompt(next.prompt);setOverrides({});
+    const next=safePlan(remoteCommand.payload?.prompt||'Cidade comercial com avenidas e edifícios',{},++variantRef.current);
+    setState('loading'); setStage('Interpretando o pedido enviado pelo ChatGPT…');setSpec(next);setPrompt(next.prompt);setOverrides({});
     // A exportação automática acontece após o novo renderizador carregar.
     generatedId.current=remoteCommand.id;
   },[remoteCommand?.id,state]);
@@ -233,38 +244,40 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
     <header className="city-header">
       <div>
         <div className="section-kicker">VITOR PRODUCTIONS / CITY ENGINE</div>
-        <h1>Cidade 3D <span className="studio-heading-accent">por descrição</span></h1>
-        <p>Descreva o cenário. Nosso gerador interpreta o pedido e constrói ruas, prédios e detalhes em três dimensões.</p>
+        <h1>Crie sua <span className="studio-heading-accent">própria cidade 3D</span></h1>
+        <p>Escreva o que você imagina. Cada clique em Gerar cria um novo cenário 3D a partir do seu texto — não escolhe um modelo pronto.</p>
       </div>
       <span className="city-tag"><Sparkles size={15}/> Geração local · sem créditos</span>
     </header>
     <div className="city-layout">
       <div className="city-main">
         <div className="city-preview">
-          <canvas key={specKey} ref={canvasRef} aria-label="Prévia navegável da cidade tridimensional gerada"/>
-          <div className="city-preview-label"><span className="city-live-dot"/> CIDADE 3D · {spec.style.toUpperCase()}</div>
-          <div className="city-hint"><Compass size={15}/> Arraste para girar · role para aproximar</div>
-          {state==='loading'&&<div className="city-preview-overlay">Construindo ruas e edifícios...</div>}
+          {spec && <canvas key={specKey} ref={canvasRef} aria-label="Prévia navegável da cidade tridimensional gerada"/>}
+          {spec && <div className="city-preview-label"><span className="city-live-dot"/> CIDADE GERADA · {spec.style.toUpperCase()} · V{spec.variant}</div>}
+          {state==='ready' && <div className="city-hint"><Compass size={15}/> Arraste para girar · role para aproximar</div>}
+          {state==='idle'&&<div className="city-preview-overlay city-preview-empty"><Sparkles size={40}/><strong>Sua cidade ainda não existe.</strong><span>Descreva como ela deve ser e clique em Gerar cidade 3D. O cenário aparecerá aqui, no lugar desta tela.</span></div>}
+          {state==='loading'&&<div className="city-preview-overlay city-preview-building"><span className="city-build-spinner"/><strong>Construindo uma cidade nova</strong><span>{stage || 'Preparando o terreno…'}</span></div>}
           {state==='failed'&&<div className="city-preview-overlay city-preview-error">{error||'Não foi possível carregar o WebGL.'}</div>}
         </div>
         <div className="city-stats">
           <span><Building2 size={15}/>{state==='ready' ? worldRef.current?.world?.stats.buildings||0 : '—'} edifícios</span>
-          <span><Layers3 size={15}/>{spec.blocks**2} quarteirões</span>
+          <span><Layers3 size={15}/>{spec ? spec.blocks**2 : '—'} quarteirões</span>
           <span><Trees size={15}/>{state==='ready'?worldRef.current?.world?.stats.trees||0:'—'} árvores</span>
           <span><CarFront size={15}/>{state==='ready'?worldRef.current?.world?.stats.cars||0:'—'} carros</span>
         </div>
         <div className="city-explanation">
-          <div className="city-section-heading"><h2>O que foi interpretado</h2><small>A descrição controla a geometria, a iluminação e o urbanismo.</small></div>
-          <div className="city-chips">{spec.explanation.map((label,index)=><span key={label+'-'+index}><Check size={13}/>{label}</span>)}</div>
+          <div className="city-section-heading"><h2>Detalhes do seu pedido</h2><small>{spec ? 'Elementos que entraram na nova cidade' : 'Serão exibidos depois de Gerar'}</small></div>
+          <div className="city-chips">{spec ? spec.explanation.map((label,index)=><span key={label+'-'+index}><Check size={13}/>{label}</span>) : <span>Os edifícios, o horário e os objetos serão definidos pelo seu texto.</span>}</div>
         </div>
       </div>
       <div className="city-panel">
-        <div className="city-section-heading"><h2>Descreva sua cidade</h2><small>Em português · até 1.500 caracteres</small></div>
+        <div className="city-section-heading"><h2>1. Conte como será sua cidade</h2><small>Seu texto, sem modelos prontos</small></div>
         <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} maxLength={1500} className="city-prompt"
           placeholder="Ex.: bairro comercial de noite, com hamburgueria, avenida principal, árvores e pedestres..." rows={6} spellCheck lang="pt-BR"/>
         <div className="city-count">{prompt.length}/1500</div>
-        <div className="city-section-heading"><h2>Começar com um estilo</h2></div>
-        <div className="city-presets">{CITY_PRESETS.map(item=><button key={item.id} onClick={()=>{setPrompt(item.text);setOverrides({});generate(item.text,{});}}>{item.label}</button>)}</div>
+        <details className="city-ideas"><summary>Precisa de inspiração? Ver ideias de descrição (opcional)</summary>
+          <div className="city-presets">{CITY_PRESETS.map(item=><button key={item.id} onClick={()=>{setPrompt(item.text);setOverrides({});}}>{item.label}</button>)}</div>
+        </details>
         <div className="city-options">
           <label>Região<select value={overrides.district||''} onChange={e=>setOverrides(o=>({...o,district:e.target.value||undefined}))}>
             <option value="">Detectar do texto</option>{OPTIONS.district.map(([v,label])=><option value={v} key={v}>{label}</option>)}</select></label>
@@ -275,9 +288,10 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
           <label>Detalhamento<select value={overrides.blocks||''} onChange={e=>setOverrides(o=>({...o,blocks:e.target.value||undefined}))}>
             <option value="">Automático</option><option value="2">Bairro pequeno</option><option value="3">Distrito médio</option><option value="4">Distrito grande</option></select></label>
         </div>
+        <div className="city-section-heading"><h2>2. Construa agora</h2><small>{state==='ready' ? 'Novo clique gera outra variação única' : 'Prévia ao vivo no quadro à esquerda'}</small></div>
         <div className="city-generate-actions">
-          <button className="city-generate" onClick={()=>generate()} disabled={state==='loading'||exporting}>
-            <WandSparkles size={18}/> GERAR CIDADE 3D
+          <button className="city-generate" onClick={()=>generate()} disabled={state==='loading'||exporting||prompt.trim().length<8}>
+            <WandSparkles size={18}/> {state==='loading'?'CRIANDO SUA CIDADE…':state==='ready'?'GERAR OUTRA CIDADE COM ESTE TEXTO':'GERAR MINHA CIDADE 3D'}
           </button>
           <button className={'city-microphone'+(listening?' is-listening':'')} aria-label={listening?'Parar gravação da cidade':'Descrever cidade pelo microfone'} title={listening?'Parar gravação':'Falar como quero a cidade'} onClick={speakCity}>
             {listening?<MicOff size={19}/>:<Mic size={19}/>}
@@ -285,7 +299,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
         </div>
         {listening&&<p className="city-speech-status" role="status">Ouvindo a descrição… A cidade será construída assim que você terminar de falar.</p>}
         <div className="city-divider"/>
-        <div className="city-section-heading"><h2>Exportar cidade</h2><small>Modelo GLB, compatível com o nosso editor.</small></div>
+        <div className="city-section-heading"><h2>3. Salve o cenário gerado</h2><small>Modelo GLB, compatível com o nosso editor.</small></div>
         <button className="city-export" onClick={()=>exportCity()} disabled={state!=='ready'||exporting}>
           <Save size={17}/>{exporting?'GERANDO ARQUIVO GLB…':'SALVAR CIDADE 3D'}
         </button>
@@ -293,7 +307,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
         {savedId&&<button className="city-film" onClick={()=>onUseInFilm?.(savedId)}><Film size={16}/> Usar esta cidade no filme <ArrowRight size={15}/></button>}
         {error&&<p className="city-error" role="alert"><CircleAlert size={16}/>{error}</p>}
         {status&&<p className="city-status" role="status">{status}</p>}
-        <p className="city-disclaimer">A primeira versão utiliza geração procedural interpretando texto ou voz transcrita pelo navegador, não um modelo de linguagem externo. O reconhecimento de fala pode usar serviços do próprio navegador. As cidades são editáveis, originais e utilizáveis no 3D Studio. Modelos muito grandes podem exigir mais memória no Safari.</p>
+        <p className="city-disclaimer">Este sistema constrói uma cena 3D nova com geometria procedural comandada pela descrição; não são maquetes prontas. O entendimento do texto usa regras locais e ainda não é um modelo neural de linguagem. O ditado pode usar serviços do navegador. O reconhecimento de fala pode usar serviços do próprio navegador. As cidades são editáveis, originais e utilizáveis no 3D Studio. Modelos muito grandes podem exigir mais memória no Safari.</p>
       </div>
     </div>
     <section className="city-library">
