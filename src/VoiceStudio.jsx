@@ -78,7 +78,7 @@ function Waveform({ blob }) {
   return <canvas aria-label="Forma de onda da narração" ref={canvasRef} className="voice-waveform"/>;
 }
 
-export default function VoiceStudio({ assets = [], onGenerated, onUseInFilm, storageAvailable = true }) {
+export default function VoiceStudio({ assets = [], onGenerated, onUseInFilm, storageAvailable = true, remoteCommand = null }) {
   const [text, setText] = useState(STARTER_TEXT);
   const [voiceId, setVoiceId] = useState('pt_BR-faber-medium');
   const [generating, setGenerating] = useState(false);
@@ -90,6 +90,8 @@ export default function VoiceStudio({ assets = [], onGenerated, onUseInFilm, sto
   const [estimatedDuration, setEstimatedDuration] = useState(null);
   const playerRef = useRef(null);
   const latestRef = useRef(0);
+  const lastRemoteRef = useRef('');
+  const generatingRef = useRef(false);
 
   const saved = useMemo(() => assets.filter(asset => asset.generatedBy === 'vp-native-piper' && asset.blob).sort(
     (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
@@ -106,39 +108,73 @@ export default function VoiceStudio({ assets = [], onGenerated, onUseInFilm, sto
   const activeVoice = PORTUGUESE_VOICES.find(voice => voice.id === voiceId);
   const canGenerate = !generating && text.trim().length >= 4 && text.length <= 3500;
 
-  async function handleGenerate() {
-    if (!canGenerate) return;
+  async function performGeneration({ script, speaker, commandId = '' }) {
+    if (generatingRef.current) {
+      if (commandId) window.dispatchEvent(new CustomEvent('vp3d-remote-command-done', {
+        detail: { id: commandId, status: 'failed', reason: 'Outra narração está sendo gerada.' },
+      }));
+      return;
+    }
+    generatingRef.current = true;
+    const inputText = String(script || '').trim();
+    const selectedVoice = String(speaker || 'pt_BR-faber-medium');
     const localRequest = ++latestRef.current;
+    if (commandId) { setText(inputText); setVoiceId(selectedVoice); }
     setGenerating(true); setError(''); setMessage('');
-    setOutput(null);
-    setEstimatedDuration(null);
+    setOutput(null); setEstimatedDuration(null);
     setProgress({ phase: 'loading', progress: null, text: 'Inicializando modelo brasileiro…' });
+    const acknowledge = (status, reason = '') => {
+      if (!commandId) return;
+      window.dispatchEvent(new CustomEvent('vp3d-remote-command-done', {
+        detail: { id: commandId, status, reason },
+      }));
+    };
     try {
       const wav = await generateNarration({
-        text, voiceId, onProgress: update => {
+        text: inputText, voiceId: selectedVoice, onProgress: update => {
           if (localRequest === latestRef.current) setProgress(update);
         },
       });
-      const name = filenameFor(text);
+      const name = filenameFor(inputText);
       let savedAsset = null;
       if (storageAvailable) {
         try {
-          savedAsset = await onGenerated?.({ blob: wav, filename: name, text: text.trim(), voiceId });
+          savedAsset = await onGenerated?.({ blob: wav, filename: name, text: inputText, voiceId: selectedVoice });
         } catch (saveError) {
           setMessage('Áudio gerado, mas a biblioteca local não respondeu. Use Baixar WAV para guardar o resultado.');
         }
       } else {
         setMessage('Modo de recuperação: o áudio não foi salvo na biblioteca. Baixe o WAV para guardar.');
       }
-      setOutput({ blob: wav, filename: name, savedAsset, text: text.trim(), voiceId });
+      setOutput({ blob: wav, filename: name, savedAsset, text: inputText, voiceId: selectedVoice });
       setProgress({ phase: 'complete', progress: 100, text: 'Narração pronta para ouvir e baixar.' });
+      // MCP só confirma após salvar de verdade na biblioteca, não apenas gerar o WAV.
+      if (savedAsset?.id) acknowledge('applied');
+      else acknowledge('failed', 'Narração gerada, mas não foi salva na biblioteca local. Abra o site e baixe o WAV.');
     } catch (generationError) {
-      setError(generationError.message || 'Não foi possível gerar esta narração.');
-      setProgress({ phase: 'error', progress: null, text: 'Falha ao gerar' });
+      const reason = generationError.message || 'Não foi possível gerar esta narração.';
+      setError(reason); setProgress({ phase: 'error', progress: null, text: 'Falha ao gerar' });
+      acknowledge('failed', reason);
     } finally {
+      generatingRef.current = false;
       setGenerating(false);
     }
   }
+
+  function handleGenerate() {
+    if (!canGenerate) return;
+    return performGeneration({ script: text, speaker: voiceId });
+  }
+
+  useEffect(() => {
+    if (!remoteCommand?.id || remoteCommand.id === lastRemoteRef.current) return;
+    lastRemoteRef.current = remoteCommand.id;
+    performGeneration({
+      script: remoteCommand.payload?.text,
+      speaker: remoteCommand.payload?.voiceId,
+      commandId: remoteCommand.id,
+    });
+  }, [remoteCommand?.id]);
 
   function loadSaved(asset) {
     if (generating) return;
