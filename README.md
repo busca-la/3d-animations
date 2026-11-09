@@ -147,3 +147,17 @@ O estúdio inclui um servidor **MCP Streamable HTTP** na URL:
 A primeira versão não inclui login, armazenamento em nuvem dos arquivos originais, colaboração, versionamento automático de arquivos nem integração direta com o Blender. Esses recursos exigirão infraestrutura adicional e desenho de permissões. Não há produções carregadas inicialmente: os materiais reais serão adicionados quando estiverem definidos.
 
 **Observação de marca:** o símbolo VP desta versão é provisório; substituir pelo logotipo oficial fornecido pela Vitor Productions antes de publicar oficialmente.
+
+
+## VP Prospector — prospecção comercial local
+
+Abra **VP Prospector** no menu ou use o endereço **/?studio=prospector**.
+
+- **Buscar negócios:** consulta pública do OpenStreetMap/Overpass por área (Ciudad del Este, Presidente Franco ou Hernandarias) e segmento. Os resultados identificam sua origem; não são dados extraídos do Google Maps. Os serviços públicos podem impor limites, mudar ou ficar indisponíveis.
+- **Importar resultados do MazyOS:** importe um CSV ou JSON exportado pelo MazyOS, até 3 MB por arquivo (máximo de 1.500 registros por importação). Campos como title/name, phone, web_site/website, complete_address/address, link são reconhecidos. O programa em Go e o navegador automatizado **não** são executados na Vercel.
+- **Organizar:** notas, priorização heurística, filtros, deduplicação, etapas comerciais e links para Maps/WhatsApp (somente com telefone compatível). Nenhuma mensagem é enviada automaticamente.
+- **Exportar:** CSV dos filtros visíveis, compatível com planilhas, com proteção de fórmulas. Exporte periodicamente como backup.
+- **Privacidade:** a lista de contatos é salva no localStorage **somente neste navegador**, separado do IndexedDB de arquivos 3D. Não existe sincronização, login ou banco remoto; limpar dados do site pode apagar os contatos. Não importe listas privadas em navegadores compartilhados.
+- **Interpretação:** “site não informado” significa apenas que a origem não trouxe um site. Não equivale a confirmar que uma empresa não possui site. Pontuação indica priorização, não probabilidade de venda.
+
+O serviço público OpenStreetMap pode ser consultado diretamente pelo navegador. A coleta original do MazyOS usa um programa Go persistente e automação de navegador e exige infraestrutura própria e configuração adequada antes de qualquer integração de execução remota.
