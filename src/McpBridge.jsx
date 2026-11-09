@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Check, CircleHelp, Cloud, Copy, KeyRound, Link2, LockKeyhole, RefreshCw, ShieldCheck, Unplug, Zap } from 'lucide-react';
+import { Bot, Check, CircleHelp, Cloud, Copy, KeyRound, Link2, LockKeyhole, RefreshCw, ShieldCheck, Unplug, Zap, Clapperboard } from 'lucide-react';
 import { fileKind } from './vault';
 
 const STORAGE_KEY = 'vp3d-mcp-pairing-v1';
@@ -20,6 +20,7 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
   const [message, setMessage] = useState('');
   const [lastSync, setLastSync] = useState('');
   const inFlight = useRef(new Set());
+  const pollNow = useRef(null);
   const seen = useRef(new Set());
   const onCommandRef = useRef(onCommand);
   onCommandRef.current = onCommand;
@@ -94,7 +95,18 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
       }
     };
     sync();
-    return () => { active = false; };
+    // Atualiza a presença enquanto o site estiver aberto e ativo; evita anunciar
+    // uma conexão antiga como se o navegador ainda estivesse recebendo comandos.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') sync();
+    }, 120000);
+    const handleFocus = () => { if (document.visibilityState === 'visible') sync(); };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [session?.pairCode, catalogJson, callBridge]);
 
   useEffect(() => {
@@ -123,12 +135,31 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
         if (active) { setConnection('error'); setMessage(error.message); }
       } finally { busy = false; }
     }
+    pollNow.current = poll;
     poll();
     const timer = window.setInterval(poll, 15000);
     const focus = () => { if (document.visibilityState === 'visible') poll(); };
     document.addEventListener('visibilitychange', focus);
-    return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', focus); };
+    return () => { active = false; pollNow.current = null; window.clearInterval(timer); document.removeEventListener('visibilitychange', focus); };
   }, [session?.pairCode, callBridge, ack]);
+
+  async function checkConnection() {
+    if (!session?.pairCode) return;
+    setWorking(true);
+    setMessage('Verificando sincronização e comandos pendentes...');
+    try {
+      await callBridge('sync', catalog);
+      setLastSync(new Date().toLocaleTimeString('pt-BR'));
+      setConnection('connected');
+      if (pollNow.current) await pollNow.current();
+      setMessage('Conexão verificada. Se um filme foi solicitado no ChatGPT, a produção abrirá no Diretor 3D nesta página.');
+    } catch (error) {
+      setConnection('error');
+      setMessage('Falha na conexão: ' + error.message);
+    } finally {
+      setWorking(false);
+    }
+  }
 
   async function start() {
     setWorking(true); setMessage('');
@@ -194,6 +225,10 @@ export default function McpBridge({ assets, projects, films = [], visible, onCom
               <p>Abra <a href="https://chatgpt.com/plugins" target="_blank" rel="noreferrer">ChatGPT Plugins</a>, clique em <b>+ → Adicionar servidor MCP personalizado</b>, escolha <b>Sem autenticação</b> e cole a URL. Depois instale o plugin “Vitor Productions 3D Studio”. No chat, escolha o plugin e envie o código de pareamento.</p>
             </div>
             <div className="mcp-connection-info"><Cloud size={15}/><span>Última sincronização: {lastSync || 'pendente'} · {catalog.assets.length} arquivos, {catalog.projects.length} projetos e {catalog.films.length} filmes.</span></div>
+            <div className="mcp-quick-actions">
+              <button className="btn btn-primary" disabled={working} onClick={checkConnection}><RefreshCw size={16}/>{working ? 'Verificando...' : 'Receber comandos agora'}</button>
+              <a className="btn btn-secondary" href="/?studio=film-studio"><Clapperboard size={16}/> Abrir Diretor 3D</a>
+            </div>
             <button className="btn btn-secondary" disabled={working} onClick={disconnect}><Unplug size={16}/>{working ? 'Desconectando...' : 'Revogar esta conexão'}</button>
           </>
         )}

@@ -103,7 +103,13 @@ function Modal({ title, subtitle, onClose, children, width = 'normal' }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(() => {
+    // Links diretos abrem a ferramenta sem pop-up, inclusive depois de atualizar o Safari.
+    try {
+      const requested = new URLSearchParams(window.location.search).get('studio');
+      return NAV.some((entry) => entry.id === requested) ? requested : 'overview';
+    } catch { return 'overview'; }
+  });
   const [projects, setProjects] = useState([]);
   const [assets, setAssets] = useState([]);
   const [films, setFilms] = useState([]);
@@ -138,6 +144,15 @@ export default function App() {
   const [lastBackup, setLastBackup] = useState(() => {
     try { return localStorage.getItem('vp3d-last-backup') || ''; } catch { return ''; }
   });
+  useEffect(() => {
+    // Link direto: https://3d-animations-eta.vercel.app/?studio=film-studio
+    // Preserva a tela ao atualizar e não cria novas janelas no Safari.
+    const url = new URL(window.location.href);
+    if (tab === 'overview') url.searchParams.delete('studio');
+    else url.searchParams.set('studio', tab);
+    window.history.replaceState({ tab }, '', url.pathname + url.search + url.hash);
+  }, [tab]);
+
   const fileInputRef = useRef(null);
   const backupInputRef = useRef(null);
 

@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(200).json(output);
     }
     if (body.op === 'sync') {
-      return res.status(200).json(await syncCatalog(code, body.assets, body.projects));
+      return res.status(200).json(await syncCatalog(code, body.assets, body.projects, body.films));
     }
     if (body.op === 'ack') {
       await acknowledge(code, body.commandId, body.status, body.reason);
