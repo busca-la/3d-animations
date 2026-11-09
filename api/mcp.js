@@ -9,9 +9,9 @@ async function safely(callback) { try { return content(await callback()); } catc
 
 function createServer() {
   const server = new McpServer({
-    name: 'vitor-productions-3d-studio', version: '1.2.0',
+    name: 'vitor-productions-3d-studio', version: '1.3.0',
   }, {
-    instructions: 'Controle o estúdio Vitor Productions usando o código de pareamento mostrado na aba ChatGPT MCP do site. Primeiro consulte listar_arquivos para obter IDs reais. Não invente arquivos, não prometa renderizações Blender e só confirme uma alteração depois de consultar estado_comando. Para criar filmes originais, prefira produzir_video_3d_completo quando quiser vídeo pronto em um único pedido, espere applied em estado_comando. Alternativamente, use criar_filme_3d, espere applied e consulte listar_filmes_3d para obter o ID. Depois use renderizar_filme_3d e confirme applied, que significa vídeo salvo na biblioteca. Não afirme que vídeo existe enquanto o estado for queued. Os arquivos são locais: para executar ações, o site pareado deve estar aberto.',
+    instructions: 'Controle o estúdio Vitor Productions usando o código de pareamento mostrado na aba ChatGPT MCP do site. Primeiro consulte listar_arquivos para obter IDs reais. Não invente arquivos, não prometa renderizações Blender e só confirme uma alteração depois de consultar estado_comando. Para criar filmes originais, prefira produzir_video_3d_completo quando quiser vídeo pronto em um único pedido, espere applied em estado_comando. Alternativamente, use criar_filme_3d, espere applied e consulte listar_filmes_3d para obter o ID. Depois use renderizar_filme_3d e confirme applied, que significa vídeo salvo na biblioteca. Não afirme que vídeo existe enquanto o estado for queued. Para criar vozes brasileiras sem ElevenLabs, use gerar_narracao_ptbr e espere applied em estado_comando. A IA de voz Piper roda no navegador e o modelo será baixado na primeira vez. Os arquivos são locais: para executar ações, o site pareado deve estar aberto.',
   });
 
   const codeSchema = z.string().min(60).max(180).describe('Código de pareamento copiado da aba ChatGPT MCP em 3d-animations-eta.vercel.app. Não é nome do arquivo.');
@@ -179,9 +179,26 @@ function createServer() {
     return { ...result, nextSteps: 'Aguarde a execução no navegador, consulte estado_comando. applied confirma o arquivo de vídeo salvo na biblioteca local.' };
   }));
 
+  server.registerTool('gerar_narracao_ptbr', {
+    title: 'Gerar narração com IA brasileira no estúdio',
+    description: 'Solicita uma voz neural brasileira GERADA DENTRO do Vitor Productions 3D Studio com modelo aberto Piper. Não usa ElevenLabs nem serviço de voz pago. O navegador pareado baixa o modelo ONNX quando necessário, sintetiza WAV e salva na biblioteca de áudio. Enfileirar NÃO significa concluir: verifique estado_comando applied.',
+    inputSchema: {
+      pair_code: codeSchema,
+      texto: z.string().min(4).max(3500).describe('Texto que será narrado em português brasileiro, no máximo 3500 caracteres.'),
+      voz: z.enum(['faber', 'edresson']).optional().default('faber').describe('Faber: voz masculina brasileira média. Edresson: alternativa masculina mais leve.'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  }, async ({ pair_code, texto, voz }) => safely(async () => {
+    const result = await queueCommand(pair_code, 'voice_generate', {
+      text: texto,
+      voiceId: voz === 'edresson' ? 'pt_BR-edresson-low' : 'pt_BR-faber-medium',
+    });
+    return { ...result, note: 'A narração foi enfileirada, mas NÃO está pronta. Deixe o site aberto, aguarde o modelo local e confirme applied em estado_comando. O WAV aparece no Estúdio de Narração e na biblioteca local.' };
+  }));
+
   server.registerTool('estado_comando', {
     title: 'Confirmar se uma ação foi aplicada no site',
-    description: 'Use após abrir_arquivo, ajustar_camera_3d ou editar_video. Apenas queued significa que ainda não foi aplicada. Apenas applied confirma execução no navegador.',
+    description: 'Use após gerar_narracao_ptbr, produzir_video_3d_completo ou outros comandos. Apenas queued significa que ainda não foi aplicada. Apenas applied confirma execução no navegador.',
     inputSchema: {
       pair_code: codeSchema,
       command_id: z.string().length(24).describe('ID do comando devolvido pela ferramenta que enfileirou a ação'),
