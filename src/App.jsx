@@ -15,6 +15,7 @@ import FilmStudio from './FilmStudio.jsx';
 import VoiceStudio from './VoiceStudio.jsx';
 import CityStudio from './CityStudio.jsx';
 import PlansStudio from './PlansStudio.jsx';
+import AccountStudio from './AccountStudio.jsx';
 import { sanitizeFilm } from './filmSchema.js';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
@@ -42,6 +43,7 @@ const NAV = [
   { id: 'voice-studio', label: 'Narração IA', icon: Mic2 },
   { id: 'city-studio', label: 'Cidade IA', icon: MapPin },
   { id: 'plans', label: 'Assinaturas', icon: CreditCard },
+  { id: 'account', label: 'Minha conta', icon: UserRound },
   { id: 'mcp', label: 'ChatGPT MCP', icon: Bot },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
@@ -634,6 +636,7 @@ export default function App() {
                 onChange={(e) => { setSearch(e.target.value); if (e.target.value) setTab('library'); }} />
               <kbd>⌕</kbd>
             </label>
+            <button className="btn btn-top" onClick={() => setTab('account')}><UserRound size={18} /><span>Minha conta</span></button>
             <button className="btn btn-top" onClick={() => openUpload()}><Plus size={18} /><span>Adicionar arquivos</span></button>
           </div>
         </header>
@@ -650,6 +653,7 @@ export default function App() {
           {tab === 'voice-studio' && <VoiceStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedNarration} onUseInFilm={(id) => { setPreferredNarrationId(id); setTab('film-studio'); }} remoteCommand={remoteNarration} />}
           {tab === 'city-studio' && <CityStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedCity} onUseInFilm={id => { setPreferredCityId(id); setTab('film-studio'); }} remoteCommand={remoteCity} />}
           {tab === 'plans' && <PlansStudio onTryCity={() => setTab('city-studio')} />}
+          {tab === 'account' && <AccountStudio />}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">
