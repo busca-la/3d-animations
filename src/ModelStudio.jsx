@@ -12,10 +12,11 @@ const CAMERA_VIEWS = [
   { id: 'topo', label: 'Superior', orbit: '0deg 0deg auto' },
 ];
 
-export default function ModelStudio({ assets, activeId, onSelect, onImport }) {
+export default function ModelStudio({ assets, activeId, onSelect, onImport, remoteCommand }) {
   const models = useMemo(() => assets.filter((asset) => fileKind(asset) === '3d'), [assets]);
   const selected = models.find((asset) => asset.id === activeId) || models[0] || null;
   const modelRef = useRef(null);
+  const lastRemoteId = useRef(null);
   const [engine, setEngine] = useState('loading');
   const [preview, setPreview] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -83,6 +84,25 @@ export default function ModelStudio({ assets, activeId, onSelect, onImport }) {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [expanded]);
+
+  useEffect(() => {
+    if (!remoteCommand || remoteCommand.id === lastRemoteId.current) return;
+    const payload = remoteCommand.payload || {};
+    if (!selected || selected.id !== payload.assetId) return;
+    const complete = (status, reason = '') => {
+      lastRemoteId.current = remoteCommand.id;
+      window.dispatchEvent(new CustomEvent('vp3d-remote-command-done', {
+        detail: { id: remoteCommand.id, status, reason },
+      }));
+    };
+    if (engine === 'error' || error) { complete('failed', error || 'Visualizador WebGL indisponível.'); return; }
+    if (!loaded || !modelRef.current) return;
+    const camera = CAMERA_VIEWS.find((item) => item.id === payload.view) || CAMERA_VIEWS[0];
+    chooseView(camera);
+    setAutoRotate(Boolean(payload.autoRotate));
+    setLightBackground(Boolean(payload.lightBackground));
+    complete('applied');
+  }, [remoteCommand?.id, selected?.id, loaded, engine, error]);
 
   function chooseView(camera) {
     setView(camera.id);
