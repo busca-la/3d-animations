@@ -1,0 +1,35 @@
+/* ChatGPT MCP — painel de pareamento e privacidade */
+.mcp-page {min-width:0}
+.mcp-layout {display:grid;grid-template-columns:minmax(0,1.5fr) minmax(250px,1fr);gap:20px;align-items:start}
+.mcp-panel,.mcp-side {background:#191c26;border:1px solid #343849;border-radius:17px;padding:28px;min-width:0}
+.mcp-panel-icon {width:50px;height:50px;display:grid;place-items:center;border-radius:13px;background:#373348;color:#d7ccff;margin-bottom:19px}
+.mcp-panel h2,.mcp-side h2 {font:800 21px/1.35 Manrope,sans-serif;margin:0 0 10px;color:#f2f1fa}
+.mcp-panel>p {font-size:12px;color:#a4a8ba;line-height:1.65;max-width:600px;margin:0 0 24px}
+.mcp-chip {border:1px solid #4c4b61;background:#2b2b3e;color:#c5c6dd;border-radius:100px;display:flex;align-items:center;gap:9px;padding:11px 15px;font-size:11px;font-weight:800;white-space:nowrap}
+.mcp-dot {height:8px;width:8px;border-radius:50%;background:#999db7}
+.mcp-chip-connected {color:#c8ead4;background:#233c32;border-color:#396f54}
+.mcp-chip-connected .mcp-dot {background:#88dbac}
+.mcp-chip-error {color:#ffd0d6;background:#422930;border-color:#8c4b53}
+.mcp-chip-error .mcp-dot {background:#ff9a9e}
+.mcp-field {margin:22px 0 0;display:grid;gap:11px;min-width:0}
+.mcp-field strong {font-size:12px;color:#ebeaf8}
+.mcp-field small {display:block;color:#8f94a8;font-size:11px;line-height:1.6;margin-top:5px}
+.mcp-field p {color:#a9adbf;font-size:12px;line-height:1.8;margin:0}
+.mcp-field b {color:#e0dafe}
+.mcp-field a {color:#d2c7ff;text-decoration:underline;text-underline-offset:3px}
+.mcp-copy-field {display:flex;align-items:center;gap:10px;background:#0f121a;border:1px solid #414657;border-radius:10px;padding:11px;min-width:0}
+.mcp-copy-field code {font:600 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;min-width:0;flex:1;user-select:all;color:#eee9ff}
+.mcp-copy-field .mcp-secret {color:#c2f2dc;font-size:11px}
+.mcp-copy-field button {display:grid;place-items:center;flex-shrink:0;cursor:pointer;color:#e7e1ff;background:#333246;border:1px solid #55506d;border-radius:8px;width:37px;height:37px}
+.mcp-copy-field button:hover {background:#484361}
+.mcp-connection-info {display:flex;align-items:center;gap:9px;color:#b6c9d8;font-size:11px;line-height:1.6;margin:22px 0}
+.mcp-message {font-size:12px;padding:13px;border-radius:9px;border:1px solid #5c527a;background:#302c42;color:#e0dcff;line-height:1.6;margin:17px 0 0}
+.mcp-feature {display:flex;align-items:start;gap:10px;margin:17px 0;color:#c9c9d8;font-size:12px;line-height:1.5}
+.mcp-feature svg {color:#aad8bf;flex-shrink:0}
+.mcp-rule {display:flex;align-items:flex-start;gap:10px;border-top:1px solid #343744;padding-top:17px;margin-top:17px;color:#9ea5ba}
+.mcp-rule svg {flex-shrink:0;color:#aaa0db;margin-top:3px}
+.mcp-rule p {margin:0;font-size:11px;line-height:1.7}
+.mcp-rule b {color:#e7e5f3}
+@media(max-width:1050px) {.mcp-layout {grid-template-columns:1fr}}
+@media(max-width:800px) {.mcp-page .page-heading {align-items:flex-start;flex-wrap:wrap}.mcp-panel,.mcp-side {padding:21px}}
+@media(max-width:600px) {.mcp-panel,.mcp-side {padding:19px}.mcp-copy-field code {font-size:10px}.mcp-chip {padding:9px 12px}}
