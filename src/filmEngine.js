@@ -30,6 +30,7 @@ export async function createFilmEngine(outputCanvas, film, assets) {
   const carModels = [];
   const hero = new THREE.Group();
   let loadedModel = null;
+  let generatedCityWorld = null;
   let worldWidth = 27;
   let worldHeight = 17;
   let currentWidth = 0;
@@ -221,10 +222,18 @@ export async function createFilmEngine(outputCanvas, film, assets) {
       assetError = 'O modelo escolhido não está disponível em GLB no navegador.';
     } else {
       try {
-        const loader = new GLTFLoader();
-        const bytes = await model.blob.arrayBuffer();
-        const gltf = await loader.parseAsync(bytes, '');
-        loadedModel = gltf.scene;
+        if (model.generator === 'vp-city-v1' && model.citySpec) {
+          // Cidades nativas preservam tráfego/pedestres animados no filme.
+          // Um GLB exportado isoladamente é estático por padrão.
+          const { createCityWorld } = await import('./cityWorld.js');
+          generatedCityWorld = createCityWorld(model.citySpec);
+          loadedModel = generatedCityWorld.root;
+        } else {
+          const loader = new GLTFLoader();
+          const bytes = await model.blob.arrayBuffer();
+          const gltf = await loader.parseAsync(bytes, '');
+          loadedModel = gltf.scene;
+        }
         const bounds = new THREE.Box3().setFromObject(loadedModel);
         const size = bounds.getSize(new THREE.Vector3());
         if (Math.max(size.x, size.y, size.z) < .001) throw new Error('Modelo sem geometria utilizável.');
@@ -238,7 +247,7 @@ export async function createFilmEngine(outputCanvas, film, assets) {
         const sphere = new THREE.Box3().setFromObject(loadedModel).getSize(new THREE.Vector3());
         worldWidth = Math.max(10, sphere.x);
         worldHeight = Math.max(8, sphere.z);
-        addBox(scene, 'chao-modelo', 110, .1, 110, 0, -.2, 0, '#8f9994');
+        if (!generatedCityWorld) addBox(scene, 'chao-modelo', 110, .1, 110, 0, -.2, 0, '#8f9994');
       } catch (error) {
         assetError = 'Não foi possível carregar GLB: ' + error.message;
       }
@@ -319,7 +328,12 @@ export async function createFilmEngine(outputCanvas, film, assets) {
         hero.rotation.y = isHero ? Math.sin(time * .55) * .24 : 0;
       }
     } else {
-      loadedModel.rotation.y = (shot.camera === 'produto' ? .08 : 0) * Math.sin(time * .35);
+      if (generatedCityWorld) {
+        generatedCityWorld.update(time);
+        loadedModel.rotation.y = 0;
+      } else {
+        loadedModel.rotation.y = (shot.camera === 'produto' ? .08 : 0) * Math.sin(time * .35);
+      }
     }
     renderer.render(scene, camera);
     ctx.clearRect(0, 0, currentWidth, currentHeight);
@@ -331,7 +345,9 @@ export async function createFilmEngine(outputCanvas, film, assets) {
   function dispose() {
     for (const geometry of geometries) geometry.dispose();
     for (const entry of materials) entry.dispose();
-    if (loadedModel) {
+    if (generatedCityWorld) {
+      generatedCityWorld.dispose();
+    } else if (loadedModel) {
       loadedModel.traverse((object) => {
         if (!object.isMesh) return;
         object.geometry?.dispose();
