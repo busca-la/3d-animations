@@ -123,7 +123,7 @@ export async function createFilmEngine(outputCanvas, film, assets) {
     addBox(scene, 'linha-parada', .14, .023, 7.5, -11.15, .055, 3.7, '#e5e1d7');
     // Construções têm portas no mesmo pavimento da calçada, janelas e placas legíveis.
     const structures = [
-      { x: 0, w: 12, h: 7.8, title: 'LA BURGER', main: '#8f6551', sign: '#1e232b', trim: '#dc9446' },
+      { x: 0, w: 12, h: 7.8, title: film.scene === 'cidade' ? 'CENTRO URBANO' : 'LA BURGER', main: '#8f6551', sign: '#1e232b', trim: '#dc9446' },
       { x: -15.3, w: 14, h: 11.3, title: 'CAFE CENTRAL', main: '#a7a59a', sign: '#384149', trim: '#cad9df' },
       { x: 16.6, w: 14.8, h: 9.5, title: 'COMERCIO', main: '#657b82', sign: '#192f38', trim: '#aed9ce' },
     ];
@@ -189,6 +189,30 @@ export async function createFilmEngine(outputCanvas, film, assets) {
     return displayBurger;
   }
 
+  function studioWorld() {
+    // Estúdio fotográfico com piso contínuo, luzes e produto em destaque.
+    addBox(scene, 'piso-estudio', 90, .35, 70, 0, -.24, 0, '#333642');
+    addBox(scene, 'ciclorama', 90, 31, .3, 0, 15, -14, '#4b5059', { roughness: .94 });
+    addBox(scene, 'painel-lateral', 10, 20, 60, -22, 10, -3, '#222934');
+    addBox(scene, 'painel-direito', 10, 20, 60, 22, 10, -3, '#222934');
+    const strip = material(film.accent, { emissive: film.accent, emissiveIntensity: .65, roughness: .35 });
+    materials.push(strip);
+    const lightBar = new THREE.Mesh(geom('BoxGeometry', 13, .12, .12), strip);
+    lightBar.position.set(0, 8, -13.7); scene.add(lightBar);
+    const podium = addCylinder(scene, 'pedestal-produto', 2.05, 2.05, 1.25, 0, .63, -3.8, '#24262d', { metalness: .3 });
+    addCylinder(scene, 'aro-dourado', 2.04, 2.04, .065, 0, 1.30, -3.8, film.accent);
+    const spot = new THREE.SpotLight(0xffffff, 48, 30, Math.PI / 6, .25, 1.1);
+    spot.position.set(5, 14, 1); spot.target.position.set(0, 1, -3.8);
+    spot.castShadow = true; spot.shadow.mapSize.set(512, 512);
+    scene.add(spot); scene.add(spot.target);
+    const back = new THREE.PointLight(film.accent, 20, 16);
+    back.position.set(-4, 5, -8); scene.add(back);
+    const featured = createBurger(hero, 0, 1.44, -3.8, 1.7);
+    scene.add(hero);
+    if (film.title.toLowerCase().includes('personagem')) createPerson(3.2, -3.5, '#525e70', .9, 'cliente');
+    return featured;
+  }
+
   let productMesh = null;
   let assetError = '';
   if (film.modelAssetId) {
@@ -220,7 +244,7 @@ export async function createFilmEngine(outputCanvas, film, assets) {
       }
     }
   } else {
-    productMesh = streetWorld();
+    productMesh = film.scene === 'estudio' ? studioWorld() : streetWorld();
   }
   if (assetError) {
     renderer.dispose();
