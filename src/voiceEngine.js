@@ -1,6 +1,6 @@
 // Síntese de fala neural 100% local, sem ElevenLabs e sem credenciais.
 // Modelo aberto Piper/VITS. Os pesos ONNX são baixados pelo navegador e
-// guardados no armazenamento privado do próprio navegador.
+// opcionalmente guardados no armazenamento privado do próprio navegador.
 export const PORTUGUESE_VOICES = [
   {
     id: 'pt_BR-faber-medium',
@@ -30,7 +30,7 @@ const MODEL_REPOSITORY = 'rhasspy/piper-voices/resolve/main';
 let loadedVoice = null;
 let generationLock = false;
 
-export async function generateNarration({ text, voiceId, onProgress }) {
+export async function generateNarration({ text, voiceId, onProgress, cacheModel = true }) {
   if (generationLock) throw new Error('Uma narração já está sendo gerada. Aguarde finalizar.');
   const cleanText = String(text || '').trim();
   if (!cleanText || cleanText.length < 4) throw new Error('Escreva pelo menos quatro caracteres.');
@@ -50,23 +50,38 @@ export async function generateNarration({ text, voiceId, onProgress }) {
     }
     let session = TtsSession._instance;
     if (!session) {
-      const reader = new CachedFileReader({
-        modelHost: MODEL_HOST,
-        modelPathPrefix: MODEL_REPOSITORY,
-        pathMap: VOICE_PATHS,
-        progress: info => {
-          if (Number(info?.total) > 0) {
-            const percent = Math.max(0, Math.min(100, Math.round(Number(info.loaded) / Number(info.total) * 100)));
-            onProgress?.({ phase: 'download', progress: percent, text: 'Baixando modelo de voz · ' + percent + '%' });
-          }
-        },
-      });
-      session = await TtsSession.create({
-        voiceId,
-        fileReader: reader,
-        allowLocalModels: false,
-        fallbackStrategy: 'cdn',
-      });
+      const createSession = async (useLocalCache) => {
+        const reader = new CachedFileReader({
+          modelHost: MODEL_HOST,
+          modelPathPrefix: MODEL_REPOSITORY,
+          pathMap: VOICE_PATHS,
+          useLocalCache,
+          progress: info => {
+            if (Number(info?.total) > 0) {
+              const percent = Math.max(0, Math.min(100, Math.round(Number(info.loaded) / Number(info.total) * 100)));
+              onProgress?.({ phase: 'download', progress: percent, text: 'Baixando modelo de voz · ' + percent + '%' });
+            }
+          },
+        });
+        return TtsSession.create({
+          voiceId,
+          fileReader: reader,
+          allowLocalModels: false,
+          fallbackStrategy: 'cdn',
+        });
+      };
+      try {
+        session = await createSession(cacheModel);
+      } catch (error) {
+        // Safari pode bloquear OPFS mesmo que a síntese WASM funcione.
+        // Repetir sem cache é seguro: não exclui arquivos existentes.
+        if (!cacheModel || !/storage|quota|opfs|filesystem|notallowed|securityerror/i.test(error.message || '')) {
+          throw error;
+        }
+        TtsSession._instance = null;
+        onProgress?.({ phase: 'loading', text: 'Armazenamento indisponível; carregando sem cache…', progress: null });
+        session = await createSession(false);
+      }
     }
     onProgress?.({ phase: 'speaking', text: 'Sintetizando sua narração…', progress: null });
     const sound = await session.predict(cleanText);
