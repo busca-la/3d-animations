@@ -176,7 +176,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
     if(!generatedId.current||state!=='ready')return;
     const id=generatedId.current;
     if(remoteCommand?.id!==id)return;
-    if(spec.prompt!==remoteCommand.payload?.prompt)return;
+    if(spec.prompt!==remoteCommand.payload?.prompt || worldRef.current?.world?.spec?.prompt!==spec.prompt || worldRef.current?.world?.spec?.seed!==spec.seed)return;
     generatedId.current='';
     exportCity({remoteId:id});
   },[state,specKey,remoteCommand?.id]);
@@ -193,7 +193,7 @@ export default function CityStudio({ assets = [], onGenerated, onUseInFilm, stor
     <div className="city-layout">
       <div className="city-main">
         <div className="city-preview">
-          <canvas ref={canvasRef} aria-label="Prévia navegável da cidade tridimensional gerada"/>
+          <canvas key={specKey} ref={canvasRef} aria-label="Prévia navegável da cidade tridimensional gerada"/>
           <div className="city-preview-label"><span className="city-live-dot"/> CIDADE 3D · {spec.style.toUpperCase()}</div>
           <div className="city-hint"><Compass size={15}/> Arraste para girar · role para aproximar</div>
           {state==='loading'&&<div className="city-preview-overlay">Construindo ruas e edifícios...</div>}
