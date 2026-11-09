@@ -5,7 +5,7 @@ import {
   CloudOff, Database, Download, FileArchive, FileBox, FileVideo, Film, Bot,
   Folder, FolderOpen, HardDrive, Image as ImageIcon, Info, Layers3,
   LayoutDashboard, Menu, MoreHorizontal, PackageOpen, Plus, Search, ShieldCheck,
-  SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, WandSparkles, X, Mic2
+  SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, WandSparkles, X, Mic2, MapPin, CreditCard
 } from 'lucide-react';
 import { getAll, remove, save, saveMany, storageEstimate } from './db';
 import ModelStudio from './ModelStudio.jsx';
@@ -13,6 +13,8 @@ import VideoStudio from './VideoStudio.jsx';
 import McpBridge from './McpBridge.jsx';
 import FilmStudio from './FilmStudio.jsx';
 import VoiceStudio from './VoiceStudio.jsx';
+import CityStudio from './CityStudio.jsx';
+import PlansStudio from './PlansStudio.jsx';
 import { sanitizeFilm } from './filmSchema.js';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
@@ -38,6 +40,8 @@ const NAV = [
   { id: 'video-editor', label: 'Editor de vídeo', icon: Clapperboard },
   { id: 'film-studio', label: 'Diretor de filmes 3D', icon: Film },
   { id: 'voice-studio', label: 'Narração IA', icon: Mic2 },
+  { id: 'city-studio', label: 'Cidade IA', icon: MapPin },
+  { id: 'plans', label: 'Assinaturas', icon: CreditCard },
   { id: 'mcp', label: 'ChatGPT MCP', icon: Bot },
   { id: 'projects', label: 'Projetos', icon: FolderOpen },
   { id: 'backups', label: 'Backups', icon: HardDrive },
@@ -138,6 +142,8 @@ export default function App() {
   const [remoteFilm, setRemoteFilm] = useState(null);
   const [preferredNarrationId, setPreferredNarrationId] = useState('');
   const [remoteNarration, setRemoteNarration] = useState(null);
+  const [remoteCity, setRemoteCity] = useState(null);
+  const [preferredCityId, setPreferredCityId] = useState('');
   const [detailCategory, setDetailCategory] = useState('outros');
   const [detailProject, setDetailProject] = useState('');
   const [detailNotes, setDetailNotes] = useState('');
@@ -359,6 +365,22 @@ export default function App() {
     return record;
   }
 
+  async function saveGeneratedCity({ blob, filename, spec }) {
+    if (!(blob instanceof Blob) || blob.size < 1000 || !filename.endsWith('.glb')) {
+      throw new Error('O arquivo GLB gerado não é válido.');
+    }
+    const record = {
+      id: makeId(), name: filename, mime: 'model/gltf-binary', category: 'cenarios', projectId: '',
+      size: blob.size, createdAt: new Date().toISOString(),
+      notes: 'Cidade criada por descrição · ' + spec.prompt.slice(0, 250),
+      generator: 'vp-city-v1', citySpec: spec, blob,
+    };
+    await save('assets', record);
+    await refresh();
+    notice('Cidade 3D gerada e salva na biblioteca.');
+    return record;
+  }
+
   async function saveProducedVideo(blob, filename, film) {
     const record = {
       id: makeId(), name: filename, mime: blob.type || (filename.endsWith('.mp4') ? 'video/mp4' : 'video/webm'),
@@ -385,6 +407,11 @@ export default function App() {
   const executeMcpCommand = useCallback(async (command) => {
     const { type, payload = {} } = command;
     const target = payload.assetId ? assets.find((item) => item.id === payload.assetId) : null;
+    if (type === 'city_generate') {
+      setRemoteCity({ id: command.id, payload });
+      setTab('city-studio');
+      return { deferred: true };
+    }
     if (type === 'voice_generate') {
       setRemoteNarration({ id: command.id, payload });
       setTab('voice-studio');
@@ -551,6 +578,9 @@ export default function App() {
           <button className="btn btn-secondary" onClick={() => {
             setOfflineDemo(true); setTab('voice-studio');
           }}><Mic2 size={18}/> Abrir Narração IA sem biblioteca</button>
+          <button className="btn btn-secondary" onClick={() => {
+            setOfflineDemo(true); setTab('city-studio');
+          }}><MapPin size={18}/> Criar cidade 3D sem biblioteca</button>
         </div>
         <small>Não limpe os dados do site. O modo de recuperação permite gerar vídeos 3D e narrações para download, mas não salva novos arquivos na biblioteca até o armazenamento voltar.</small>
       </div>
@@ -610,14 +640,16 @@ export default function App() {
 
         <main className="main-content">
           {offlineDemo && <div className="storage-recovery-banner" role="alert">
-            <Info size={17}/><span>Modo de recuperação: arquivos locais indisponíveis. Você pode gerar vídeos ou narrações, mas deve baixar os resultados para não perdê-los.</span>
+            <Info size={17}/><span>Modo de recuperação: arquivos locais indisponíveis. Você pode gerar vídeos, cidades 3D ou narrações, mas deve baixar os resultados para não perdê-los.</span>
             <button className="btn btn-secondary" onClick={retryLibrary}>Reconectar biblioteca</button>
           </div>}
           {!offlineDemo && <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} films={films} onCommand={executeMcpCommand} />}
           {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} remoteCommand={remoteCamera} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
-          {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} preferredAudioId={preferredNarrationId} />}
+          {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} preferredAudioId={preferredNarrationId} preferredModelId={preferredCityId} />}
           {tab === 'voice-studio' && <VoiceStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedNarration} onUseInFilm={(id) => { setPreferredNarrationId(id); setTab('film-studio'); }} remoteCommand={remoteNarration} />}
+          {tab === 'city-studio' && <CityStudio assets={assets} storageAvailable={!offlineDemo} onGenerated={saveGeneratedCity} onUseInFilm={id => { setPreferredCityId(id); setTab('film-studio'); }} remoteCommand={remoteCity} />}
+          {tab === 'plans' && <PlansStudio onTryCity={() => setTab('city-studio')} />}
           {tab === 'overview' && <>
             <section className="hero">
               <div className="hero-copy">
@@ -626,7 +658,7 @@ export default function App() {
                 <p>Personagens, cidades, animações e projetos 3D organizados para a próxima produção.</p>
                 <div className="hero-actions">
                   <button className="btn btn-primary" onClick={() => openUpload()}><Upload size={17} />Adicionar arquivos</button>
-                  <button className="btn btn-ghost" onClick={() => setTab('film-studio')}><Film size={17} /> Produzir filme 3D <ArrowRight size={16} /></button>
+                  <button className="btn btn-ghost" onClick={() => setTab('city-studio')}><MapPin size={17} /> Gerar cidade 3D <ArrowRight size={16} /></button>
                 </div>
               </div>
               <div className="hero-art" aria-hidden="true">
