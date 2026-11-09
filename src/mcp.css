@@ -33,3 +33,7 @@
 @media(max-width:1050px) {.mcp-layout {grid-template-columns:1fr}}
 @media(max-width:800px) {.mcp-page .page-heading {align-items:flex-start;flex-wrap:wrap}.mcp-panel,.mcp-side {padding:21px}}
 @media(max-width:600px) {.mcp-panel,.mcp-side {padding:19px}.mcp-copy-field code {font-size:10px}.mcp-chip {padding:9px 12px}}
+
+.mcp-quick-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
+.mcp-quick-actions .btn{display:inline-flex;justify-content:center;text-decoration:none;align-items:center;gap:9px;min-height:43px}
+@media(max-width:600px){.mcp-quick-actions{flex-direction:column;align-items:stretch}.mcp-quick-actions .btn{width:100%}}
