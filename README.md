@@ -59,6 +59,14 @@ Use **Backups → Baixar backup ZIP** com frequência e salve uma cópia em outr
 
 Para mostrar uma cena ou personagem do Blender no visualizador, exporte em **GLB** com materiais e texturas incorporados. Arquivos .blend, .fbx, .obj, cenas e outros formatos continuam guardados para download, mas não são abertos como modelos 3D interativos diretamente.
 
+## Correção do fluxo de criação de cidades — geração sob medida
+
+A tela `Cidade IA` agora abre **vazia**: não há cidade pré-gerada nem seleção obrigatória de modelos. O usuário digita uma descrição própria e clica **GERAR MINHA CIDADE 3D**. O botão efetivamente recompila o pedido e recria toda a malha Three.js, exibindo um estado de construção. Repetir a mesma descrição gera uma **variação nova** (seed diferente) e não reutiliza silenciosamente o cenário anterior. As sugestões ficam dentro de um painel fechado, servem apenas para preencher a caixa de texto e nunca disparam a geração sozinhas.
+
+O compilador local interpreta também quantidades de prédios, carros, árvores e pedestres, além de tipologias como escolas, hospitais, postos, hotéis, templos, shopping, biblioteca e equipamentos como fonte, parquinho, estacionamento e abrigo de ônibus; ruas largas e estreitas alteram a largura do asfalto. É uma **geração procedural paramétrica baseada em linguagem natural**, não um modelo neural ilimitado — pedidos de geometrias inéditas fora do catálogo simbólico ainda precisam de suporte programado.
+
+Testado em Chromium: estado inicial vazio; comando livre "5 prédios, escola, hospital, praça com fonte, ponto de ônibus, sem carros" gerou **5 edifícios e 0 carros**, chips correspondentes, nova cena no segundo clique, GLB salvo/baixado, vinculação ao Diretor de Filmes e layout móvel 390px. Safari real não foi testado nesta execução.
+
 ## Cidade IA — gerador de cidades 3D por descrição
 
 O menu **Cidade IA** cria uma cidade 3D diretamente no Vitor Productions 3D Studio a partir de texto livre em português ou de ditado por microfone (quando o navegador suporta Web Speech API). **A v1 é geração procedural com interpretação de texto por regras locais, não é um LLM nem um serviço externo que desenha objetos arbitrários**. Ela suporta conceitos urbanos limitados e gera geometria real controlável pelo usuário. Sem compra de créditos ou chamada a APIs pagas.

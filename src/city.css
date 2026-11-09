@@ -66,3 +66,19 @@
 .city-microphone:hover{background:#4b4267}
 .city-microphone.is-listening{background:#693b48;color:#ffe3e9;border-color:#b86e85}
 .city-speech-status{font-size:11px;color:#ddc8e9;margin:12px 0 0;line-height:1.6}
+
+/* Tela inicial sem cidade pré-carregada: a geração começa com o pedido do usuário. */
+.city-preview-empty,.city-preview-building{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:13px;text-align:center;background:radial-gradient(circle at 55% 38%,#34354e 0%,#1b2231 45%,#141b28 100%)}
+.city-preview-empty svg{color:#bbaff2}
+.city-preview-empty strong,.city-preview-building strong{color:#f2efff;font-size:clamp(17px,2.3vw,22px);letter-spacing:-.03em}
+.city-preview-empty span,.city-preview-building span{max-width:330px;color:#b8bdcc;font-size:12px;line-height:1.7}
+.city-build-spinner{width:38px;height:38px;border:3px solid #55546d;border-top-color:#baa5f2;border-radius:50%;animation:city-spin .9s linear infinite}
+@keyframes city-spin{to{transform:rotate(360deg)}}
+.city-ideas{border:1px solid #42465a;background:#252739;border-radius:10px;padding:11px 12px;margin-bottom:17px}
+.city-ideas summary{cursor:pointer;list-style:none;font-size:11px;font-weight:750;color:#c1bfd7}
+.city-ideas summary::-webkit-details-marker{display:none}
+.city-ideas summary::before{content:'+';font-size:15px;font-weight:850;color:#b3a4f3;margin-right:9px}
+.city-ideas[open] summary::before{content:'−'}
+.city-ideas .city-presets{padding-top:14px;margin:0}
+.city-panel>.city-section-heading:has(+ .city-generate-actions){margin-top:10px}
+.city-generate:disabled{filter:grayscale(.25)}

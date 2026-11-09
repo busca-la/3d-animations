@@ -19,10 +19,18 @@ const dictionary = [
   ['restaurante', /restaurante|pizzaria|comida/],
   ['cinema', /cinema|teatro/],
   ['farmacia', /farmacia|drogaria/],
-  ['loja', /lojas|loja|comercio|shopping|vitrine/],
+  ['loja', /lojas|loja|comercio|vitrine/],
+  ['escola', /escola|colegio|universidade|faculdade/],
+  ['hospital', /hospital|clinica|posto de saude/],
+  ['posto', /posto de gasolina|posto de combustivel|gasolina|gas station/],
+  ['hotel', /hotel|pousada|hostel/],
+  ['igreja', /igreja|capela|templo/],
+  ['shopping', /shopping|centro comercial grande/],
+  ['biblioteca', /biblioteca|livraria/],
+  ['estadio', /estadio|quadra esportiva|campo de futebol/],
 ];
 
-export function interpretCityPrompt(rawPrompt, overrides = {}) {
+export function interpretCityPrompt(rawPrompt, overrides = {}, variant = 0) {
   const prompt = String(rawPrompt || '').trim().slice(0, 1500);
   const text = normalize(prompt);
   if (text.length < 8) throw new Error('Descreva sua cidade em pelo menos oito caracteres.');
@@ -58,6 +66,29 @@ export function interpretCityPrompt(rawPrompt, overrides = {}) {
   const requestedBlocks = [...text.matchAll(/(\d)\s*quarteiroes?/g)][0]?.[1];
   const parsedBlocks = requestedBlocks ? Number(requestedBlocks) : dense ? 4 : sparse ? 2 : 3;
   const stores = dictionary.filter(([, re]) => re.test(text)).map(([name]) => name);
+  const requestedBuildings = Number(text.match(/(\d{1,2})\s*(?:predios|edificios|casas|galpoes|lojas)/)?.[1] || 0);
+  const requestedCars = Number(text.match(/(\d{1,2})\s*(?:carros|veiculos)/)?.[1] || 0);
+  const requestedTrees = Number(text.match(/(\d{1,2})\s*(?:arvores|palmeiras)/)?.[1] || 0);
+  const requestedPeople = Number(text.match(/(\d{1,2})\s*(?:pessoas|pedestres)/)?.[1] || 0);
+  const noCars = matches(text, /sem carros|sem veiculos|sem transito|rua de pedestres|via de pedestres/);
+  const noPeople = matches(text, /sem pessoas|sem pedestres|cidade deserta|ruas vazias/);
+  const pedestrianOnly = matches(text, /exclusivament[e]? para pedestres|rua de pedestres|calcadao/);
+  const avenue = matches(text, /avenida|boulevard|via larga|rua larga/);
+  const narrow = matches(text, /ruas estreitas|vielas|ruas pequenas|becos/);
+  const roadWidth = avenue ? 8.6 : narrow ? 5.4 : 7.6;
+  const treesStyle = matches(text, /palmeiras|coqueiros/) ? 'palmeira' : 'comum';
+  const focusFeatures = {
+    playground: matches(text, /parquinho|playground|brinquedos|escorrega/),
+    fountain: matches(text, /fonte|chafariz|espelho d agua/),
+    parking: matches(text, /estacionamento|garagem publica|parking/),
+    busStop: matches(text, /ponto de onibus|parada de onibus|terminal de onibus/),
+  };
+  const sceneObjects = [];
+  if(focusFeatures.playground)sceneObjects.push('playground');
+  if(focusFeatures.fountain)sceneObjects.push('fonte');
+  if(focusFeatures.parking)sceneObjects.push('estacionamento');
+  if(focusFeatures.busStop)sceneObjects.push('ponto de ônibus');
+
   if (!stores.length && district === 'comercial') stores.push('loja','cafeteria','hamburgueria');
   if (!stores.length && district === 'industrial') stores.push('galpao');
   const defaultFocal = stores.includes('hamburgueria') ? 'hamburgueria' : stores[0] || 'loja';
@@ -70,6 +101,11 @@ export function interpretCityPrompt(rawPrompt, overrides = {}) {
     trees ? 'Árvores' : null,
     crossing ? 'Faixas de pedestre' : null,
     ...stores.map(v => 'Fachadas: ' + v),
+    ...sceneObjects.map(v => 'Objetos: '+v),
+    requestedBuildings ? requestedBuildings + ' construções solicitadas' : null,
+    requestedCars ? requestedCars + ' carros solicitados' : null,
+    noCars ? 'Ruas sem carros' : null,
+    noPeople ? 'Sem pedestres' : null,
   ].filter(Boolean);
 
   const pick = (key, allowed, initial) => allowed.includes(overrides[key]) ? overrides[key] : initial;
@@ -77,7 +113,8 @@ export function interpretCityPrompt(rawPrompt, overrides = {}) {
   return {
     version: 1,
     prompt,
-    seed: hash(text),
+    seed: hash(text + '#' + String(variant)),
+    variant: Number(variant) || 0,
     district: pick('district',['comercial','residencial','industrial'],district),
     style: pick('style',['moderno','retro','futurista'],style),
     time: pick('time',['dia','tarde','noite'],time),
@@ -88,10 +125,16 @@ export function interpretCityPrompt(rawPrompt, overrides = {}) {
     blocks: blockCount,
     park: Boolean(park || overrides.park),
     trees, sidewalks, crossing,
-    stores: stores.slice(0,7),
+    requestedBuildings: Math.min(48, Math.max(0, requestedBuildings)),
+    requestedCars: noCars ? 0 : requestedCars ? Math.min(25, requestedCars) : null,
+    requestedTrees: requestedTrees ? Math.min(30, requestedTrees) : null,
+    requestedPeople: noPeople ? 0 : requestedPeople ? Math.min(25, requestedPeople) : null,
+    noCars, noPeople, pedestrianOnly,
+    roadWidth, treesStyle, focusFeatures,
+    stores: stores.slice(0,14),
     focal: defaultFocal,
     colors,
-    explanation: featureLabels,
+    explanation: featureLabels.filter(Boolean),
     capacity: Math.min(16, blockCount * blockCount),
   };
 }

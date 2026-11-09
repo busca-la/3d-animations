@@ -28,6 +28,8 @@ const STORE_LABELS = {
   hamburgueria:'HAMBURGUERIA', cafeteria:'CAFETERIA', padaria:'PADARIA',
   mercado:'MERCADO', restaurante:'RESTAURANTE', cinema:'CINEMA',
   farmacia:'FARMÁCIA', loja:'LOJA', galpao:'GALPÃO',
+  escola:'ESCOLA', hospital:'HOSPITAL', posto:'POSTO', hotel:'HOTEL',
+  igreja:'IGREJA', shopping:'SHOPPING', biblioteca:'BIBLIOTECA', estadio:'ESTÁDIO',
 };
 const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
 const sinus = (x) => (Math.sin(x)+1)/2;
@@ -78,7 +80,7 @@ export function createCityWorld(spec) {
   const cylinder=(par,name,x,y,z,r,h,col,sides=8)=>mesh(par,name,geom('CylinderGeometry',r,r,h,sides),getMat(col),[x,y,z]);
   const sphere=(par,name,x,y,z,r,col,scale=[1,1,1])=>mesh(par,name,geom('IcosahedronGeometry',1,1),getMat(col),[x,y,z],scale.map(t=>t*r));
   const sidewalks = spec.sidewalks !== false;
-  const roadWidth=7.6, spacing=21.5;
+  const roadWidth=clamp(Number(spec.roadWidth)||7.6,5.4,9.0), spacing=21.5;
   const N=clamp(Number(spec.blocks)||3,2,4);
   const roadNodes=Array.from({length:N+1},(_,i)=>(i-N/2)*spacing);
   const min=roadNodes[0],max=roadNodes[N],total=max-min+roadWidth+14;
@@ -106,8 +108,9 @@ export function createCityWorld(spec) {
       const x=roadNodes[xi],z=roadNodes[zi];
       // Faixas atravessam os eixos certos; nenhuma faixa flutua ou cobre calçadas.
       if(spec.crossing!==false){
-        for(let k=0;k<9;k++){
-          const offset=-roadWidth/2+.49+k*.8;
+        const stripeCount=Math.max(5, Math.floor(roadWidth/.75));
+        for(let k=0;k<stripeCount;k++){
+          const offset=(k-(stripeCount-1)/2)*.75;
           if(xi<N){
             box(root,'Faixa pedestre transversal',x+roadWidth/2+1.65,.090,z+offset,2.6,.012,.40,'#e9e9e3');
           }
@@ -172,7 +175,20 @@ export function createCityWorld(spec) {
     const wall=p.buildings[Math.floor(rand()*p.buildings.length)];
     const trim=p.accent[Math.floor(rand()*p.accent.length)];
     box(root,isFocus?'Comércio principal':'Edifício',x,.35+h/2,z,w,h,d,wall);
-    box(root,'Cobertura',x,.37+h,z,w+.28,.28,d+.28,'#454f56');
+    box(root,'Cobertura',x,.37+h,z,w+.28,.28,d+.28,storeLabel==='CASA'?'#725b54':'#454f56');
+    if(storeLabel==='CASA') {
+      // Telhado próprio de casa: um prisma triangular contínuo, não um bloco genérico.
+      const geometry=geom('CylinderGeometry',.95,.95,1,3);
+      const roof=mesh(root,'Telhado da casa',geometry,getMat('#835f52'),
+        [x,h+.9,z],[d*.74,Math.max(1.8,w*.62),d*.74],[Math.PI/2,Math.PI/2,0]);
+      roof.castShadow=true;
+      // Jardim na entrada, contido no lote.
+      box(root,'Jardim da casa',x,.36,z+d/2+.38,Math.min(w-1,.95),.06,.55,p.lawn);
+    }
+    if(storeLabel==='HOSPITAL') {
+      box(root,'Cruz hospitalar vertical',x,Math.min(4.7,h+.2),front+.25,.25,.95,.08,'#b94545');
+      box(root,'Cruz hospitalar horizontal',x,Math.min(4.7,h+.2),front+.25,.82,.25,.09,'#b94545');
+    }
     box(root,'Fachada térrea',x,1.6,z+d/2+.06,w-.16,2.5,.12,commercial?'#677b7d':wall);
     // Porta alinhada com o pavimento da calçada, sem degrau impossível.
     box(root,'Porta',x,1.48,front+.14,1.35,2.3,.18,commercial?'#343c42':'#6b5750');
@@ -212,7 +228,9 @@ export function createCityWorld(spec) {
 
   const centerIndex=Math.floor((N-1)/2);
   const centerBlock=blocks.find(b=>b.ix===centerIndex&&b.iz===centerIndex) || blocks[0];
-  const parkBlock=spec.park?blocks.find(b=>b.ix===N-1&&b.iz===N-1)||null:null;
+  const parkNeeded=spec.park || spec.focusFeatures?.playground || spec.focusFeatures?.fountain;
+  const parkOptions=blocks.filter(b=>b!==centerBlock);
+  const parkBlock=parkNeeded ? parkOptions[Math.floor(rand()*parkOptions.length)] || null : null;
   const requestedShops=spec.stores.map(key=>STORE_LABELS[key]||key.toUpperCase()).filter(Boolean);
   const fallback=DEFAULT_STORES[spec.district]||DEFAULT_STORES.comercial;
   let storeIndex=0;
@@ -222,18 +240,44 @@ export function createCityWorld(spec) {
       box(root,'Praça verde',block.x,.347,block.z,block.available-1,.07,block.available-1,p.lawn);
       box(root,'Caminho da praça',block.x,.392,block.z,block.available-1,.05,1.1,'#c5b5a1');
       box(root,'Caminho transversal',block.x,.394,block.z,1.1,.05,block.available-1,'#c5b5a1');
-      for(const dx of [-3,3]) for(const dz of [-3,3]) {
-        // Árvores sempre dentro da área verde, não em cima de asfalto.
-        tree(block.x+dx,block.z+dz,1+rand()*.45);
+      if(spec.trees && !(spec.requestedTrees===0)) {
+        for(const dx of [-3,3]) for(const dz of [-3,3]) {
+          // Árvores sempre dentro da área verde, não em cima de asfalto.
+          tree(block.x+dx,block.z+dz,1+rand()*.45);
+        }
       }
       bench(block.x-2,block.z+1.5);
       bench(block.x+2,block.z-1.5);
+      if(spec.focusFeatures?.fountain) {
+        cylinder(root,'Fonte base',block.x,.48,block.z,1.45,.55,'#949fa2',16);
+        cylinder(root,'Água da fonte',block.x,.78,block.z,1.21,.05,'#6eafc7',16);
+        cylinder(root,'Fonte central',block.x,1.27,block.z,.2,.94,'#b2c4c4',12);
+        sphere(root,'Jato de água',block.x,1.86,block.z,.24,'#b1e1ea');
+      }
+      if(spec.focusFeatures?.playground) {
+        const px=block.x+2.0,pz=block.z-1;
+        box(root,'Escorregador plataforma',px,1.22,pz,1.15,.15,1.05,'#d79e57');
+        for(const dx of [-.43,.43]) for(const dz of [-.37,.37])
+          cylinder(root,'Suporte parquinho',px+dx,.75,pz+dz,.055,1.35,'#647988',6);
+        const slide=box(root,'Escorregador',px+1.12,.72,pz,.85,.12,.78,'#b77a65');
+        slide.rotation.z=-.55;
+      }
       continue;
     }
-    const slots=spec.district==='industrial'?1:spec.density==='alta'?3:2;
+    if(spec.requestedBuildings && stats.buildings>=spec.requestedBuildings) {
+      box(root,'Lote com jardim',block.x,.338,block.z,block.available-1,.045,block.available-1,p.lawn);
+      if(spec.trees && (!spec.requestedTrees || stats.trees<spec.requestedTrees))
+        tree(block.x,block.z,.75);
+      continue;
+    }
+    // Variações por pedido: fachadas, quantidades e lotes mudam de lugar a cada geração.
+    const slots=spec.district==='industrial'?1:
+      spec.density==='alta' ? (rand()<.60?3:2) :
+      spec.density==='baixa' ? (rand()<.55?1:2) : (rand()<.28?1:2);
     const inside=block.available-2.0;
     const pitch=inside/slots, depth=inside-.4;
     for(let j=0;j<slots;j++){
+      if(spec.requestedBuildings && stats.buildings>=spec.requestedBuildings) break;
       const isFocus=block===centerBlock&&j===0;
       const x=block.x+(j-(slots-1)/2)*pitch;
       const frontage=block.z+.0;
@@ -243,6 +287,7 @@ export function createCityWorld(spec) {
         requestedShops.length?requestedShops[(storeIndex++)%requestedShops.length]:
         fallback[Math.floor(rand()*fallback.length)];
       const h=spec.district==='industrial'?5.7+rand()*2.1:
+        store==='CASA'?(3.5+rand()*2.3):
         spec.height==='alto'?(9+rand()*12):
         spec.height==='baixo'?(3.9+rand()*2.9):
         (5.4+rand()*7.1);
@@ -255,6 +300,7 @@ export function createCityWorld(spec) {
   }
 
   function tree(x,z,scale=1) {
+    if(spec.requestedTrees && stats.trees>=spec.requestedTrees)return;
     cylinder(root,'Tronco',x,.45+1.25*scale,z,.15*scale,2.5*scale,'#654b3b',8);
     sphere(root,'Copa',x,2.65*scale,z,1.35,'#5f7d67',[scale,scale*.94,scale]);
     sphere(root,'Copa secundária',x+.4*scale,2.9*scale,z-.2*scale,.85,'#678669',[scale,scale,scale]);
@@ -264,6 +310,35 @@ export function createCityWorld(spec) {
     for(const shift of [-.75,.75])box(root,'Pé banco',x+shift,.59,z,.16,.5,.42,'#485056');
     box(root,'Banco assento',x,.87,z,2.0,.15,.65,'#907761');
     box(root,'Encosto banco',x,1.35,z-.24,2.0,.72,.12,'#907761');
+  }
+
+  // Elementos que dependem da descrição: estacionamento, paragem e palmeiras.
+  if(spec.focusFeatures?.parking){
+    const lot=blocks.find(b=>b!==centerBlock&&b!==parkBlock);
+    if(lot){
+      const px=lot.x,pz=lot.z;
+      box(root,'Estacionamento',px,.35,pz,Math.min(lot.available-1,9),.08,3.5,p.road,'road');
+      for(const dx of [-3,-1,1,3])box(root,'Vaga estacionamento',px+dx,.396,pz,.065,.013,3.1,'#e9e7dc');
+    }
+  }
+  if(spec.focusFeatures?.busStop){
+    const bx=centerBlock.x+centerBlock.available/2-1,bz=centerBlock.z-centerBlock.available/2+1;
+    for(const dx of [-.85,.85])cylinder(root,'Poste abrigo',bx+dx,1.25,bz,.07,2.3,'#545f66');
+    box(root,'Cobertura ponto ônibus',bx,2.48,bz,2.4,.17,1.4,'#6b8290');
+    box(root,'Banco abrigo',bx,.80,bz,1.8,.16,.4,'#8a7965');
+  }
+  if(spec.treesStyle==='palmeira' && spec.trees){
+    for(const b of blocks.slice(0,Math.min(6,blocks.length))){
+      if(spec.requestedTrees && stats.trees>=spec.requestedTrees)break;
+      cylinder(root,'Tronco palmeira',b.x-3,1.8,b.z-3,.13,3.4,'#8a745b',9);
+      for(let k=0;k<7;k++){
+        const angle=k/7*Math.PI*2;
+        const leaf=box(root,'Folha palmeira',b.x-3+Math.cos(angle)*.85,3.6,b.z-3+Math.sin(angle)*.85,1.7,.13,.34,'#587858');
+        leaf.rotation.y=-angle;
+        leaf.rotation.z=Math.sin(angle)*.18;
+      }
+      stats.trees++;
+    }
   }
 
   // Iluminação urbana construída fora da via; mais densidade só à noite.
@@ -304,7 +379,9 @@ export function createCityWorld(spec) {
     cars.push({group,dir,z,x,offset});
     stats.cars++;
   }
-  const carCount=spec.traffic==='alto'?Math.min(14,5+N*2):spec.traffic==='baixo'?Math.max(2,N-1):N+2;
+  const carCount=spec.noCars || spec.pedestrianOnly ? 0 : Number.isInteger(spec.requestedCars) ?
+    Math.min(25,Math.max(0,spec.requestedCars)) :
+    spec.traffic==='alto'?Math.min(14,5+N*2):spec.traffic==='baixo'?Math.max(2,N-1):N+2;
   const colors=['#9a7b68','#71868b','#617b68','#a69b83','#7a7f91'];
   for(let i=0;i<carCount;i++){
     const row=roadNodes[i%(N+1)];
@@ -337,7 +414,9 @@ export function createCityWorld(spec) {
     root.add(g);pedestrians.push({g,arms,legs,x,z,role,index});
     stats.pedestrians++;
   }
-  const pedCount=spec.density==='alta'?Math.min(13,N*3):spec.density==='baixa'?Math.max(2,N):Math.min(9,N*2);
+  const pedCount=spec.noPeople ? 0 : Number.isInteger(spec.requestedPeople) ?
+    Math.min(25,Math.max(0,spec.requestedPeople)) :
+    spec.density==='alta'?Math.min(13,N*3):spec.density==='baixa'?Math.max(2,N):Math.min(9,N*2);
   for(let i=0;i<pedCount;i++){
     const alongX=i%3!==0, road=roadNodes[(i+1)%(N+1)];
     const side=(i%2===0?1:-1);
