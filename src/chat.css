@@ -74,3 +74,18 @@
 @media(max-width:960px){.vp-chat-page{min-height:calc(100dvh - 104px)}.vp-chat-feed{min-height:350px;max-height:none}.vp-chat-suggestions{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.vp-chat-page{min-height:calc(100dvh - 156px);border-radius:12px}.vp-chat-top{padding:15px}.vp-chat-brand img{width:30px;height:27px}.vp-chat-brand>span{font-size:18px}.vp-chat-clear{font-size:10px;padding:8px 10px}.vp-chat-feed{padding:26px 15px 10px;min-height:320px}.vp-chat-welcome{gap:12px;padding:3px 0 0}.vp-welcome-mark{width:66px;height:66px;border-radius:18px}.vp-welcome-mark img{width:53px}.vp-welcome-eyebrow{font-size:8px}.vp-chat-suggestions{grid-template-columns:1fr;gap:8px;margin-top:8px}.vp-chat-suggestions button{padding:11px 13px;min-height:auto;flex-direction:row;align-items:center;gap:9px}.vp-chat-suggestions button svg{margin:auto 0 auto auto;flex-shrink:0}.vp-chat-compose-wrap{padding:10px 11px 14px}.vp-compose-hint{font-size:9px}.vp-video-frame{height:290px}.vp-format-16-9{height:auto;width:100%}.vp-chat-output{padding:10px}.vp-output-actions{flex-direction:column}.vp-output-actions button{width:100%}}
 @media(prefers-reduced-motion:reduce){.vp-flux-layer{display:none}.vp-pulse-ring svg{animation:none}.vp-chat-suggestions button{transition:none}}
+
+/* Ajustes de layout: a tela de criação é a entrada principal, com navegação discreta. */
+.vp-main-brand-logo{display:block;width:46px;height:39px;object-fit:contain;flex-shrink:0}
+.app-shell.vp-creator-mode{background:#08090c}
+.vp-creator-mode .sidebar{background:#0b0c10;border-color:#212229}
+.vp-creator-mode .sidebar .brand{border-bottom-color:#272830}
+.vp-creator-mode .sidebar-nav .nav-item{color:#b2b5be}
+.vp-creator-mode .sidebar-nav .nav-item.active{background:#23252c;color:#fff}
+.vp-creator-mode .sidebar-nav .nav-item:hover:not(.active){background:#1b1d23;color:#f5f5f7}
+.vp-creator-mode .categories-nav,.vp-creator-mode .sidebar-bottom,.vp-creator-mode .sidebar-divider{display:none}
+.vp-creator-mode .workspace{background:#08090c}
+.vp-creator-mode .main-content{padding:14px 16px 20px}
+.vp-creator-mode .topbar{background:#0c0d11;border-bottom-color:#22242b}
+.vp-creator-mode .site-footer{background:#0b0c10;border-top-color:#22242b}
+@media(max-width:600px){.vp-creator-mode .main-content{padding:7px 8px 12px}}
