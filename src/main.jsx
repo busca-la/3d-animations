@@ -9,6 +9,7 @@ import './voice.css';
 import './city.css';
 import './plans.css';
 import './account.css';
+import './chat.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode><App /></React.StrictMode>

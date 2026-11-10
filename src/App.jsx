@@ -16,6 +16,7 @@ import VoiceStudio from './VoiceStudio.jsx';
 import CityStudio from './CityStudio.jsx';
 import PlansStudio from './PlansStudio.jsx';
 import AccountStudio from './AccountStudio.jsx';
+import ChatStudio from './ChatStudio.jsx';
 import { sanitizeFilm } from './filmSchema.js';
 import {
   CATEGORIES, STATUSES, categoryFor, downloadBlob, fileExtension, fileKind,
@@ -35,7 +36,8 @@ const CATEGORY_ICONS = {
 };
 
 const NAV = [
-  { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
+  { id: 'create', label: 'Criar vídeo', icon: WandSparkles },
+  { id: 'overview', label: 'Painel', icon: LayoutDashboard },
   { id: 'library', label: 'Biblioteca', icon: Layers3 },
   { id: 'models', label: 'Visualizador 3D', icon: Box },
   { id: 'video-editor', label: 'Editor de vídeo', icon: Clapperboard },
@@ -115,8 +117,8 @@ export default function App() {
     // Links diretos abrem a ferramenta sem pop-up, inclusive depois de atualizar o Safari.
     try {
       const requested = new URLSearchParams(window.location.search).get('studio');
-      return NAV.some((entry) => entry.id === requested) ? requested : 'overview';
-    } catch { return 'overview'; }
+      return NAV.some((entry) => entry.id === requested) ? requested : 'create';
+    } catch { return 'create'; }
   });
   const [projects, setProjects] = useState([]);
   const [assets, setAssets] = useState([]);
@@ -162,7 +164,7 @@ export default function App() {
     // Link direto: https://3d-animations-eta.vercel.app/?studio=film-studio
     // Preserva a tela ao atualizar e não cria novas janelas no Safari.
     const url = new URL(window.location.href);
-    if (tab === 'overview') url.searchParams.delete('studio');
+    if (tab === 'create') url.searchParams.delete('studio');
     else url.searchParams.set('studio', tab);
     window.history.replaceState({ tab }, '', url.pathname + url.search + url.hash);
   }, [tab]);
@@ -340,7 +342,10 @@ export default function App() {
     const stored = { ...cleaned, id: old?.id || makeId(),
       createdAt: old?.createdAt || now, updatedAt: now };
     if (stored.modelAssetId && !assets.some(a => a.id === stored.modelAssetId && fileKind(a) === '3d')) {
-      throw new Error('O modelo GLB escolhido não está disponível neste navegador.');
+      const persistedAssets = await getAll('assets');
+      if (!persistedAssets.some(a => a.id === stored.modelAssetId && fileKind(a) === '3d')) {
+        throw new Error('O modelo GLB escolhido não está disponível neste navegador.');
+      }
     }
     await save('films', stored);
     await refresh();
@@ -590,11 +595,11 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
+    <div className={'app-shell' + (tab === 'create' ? ' vp-creator-mode' : '')} onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">V<span>·</span>P</div>
-          <div className="brand-copy"><strong>VITOR PRODUCTIONS</strong><span>3D PRODUCTION VAULT</span></div>
+          <img className="vp-main-brand-logo" src="/vp-mark.svg" alt="Vitor Productions"/>
+          <div className="brand-copy"><strong>VP STUDIO</strong><span>BY VITOR PRODUCTIONS</span></div>
         </div>
         <div className="nav-title">WORKSPACE</div>
         <nav className="sidebar-nav" aria-label="Navegação principal">
@@ -628,7 +633,7 @@ export default function App() {
 
       <div className="workspace">
         <header className="topbar">
-          <div className="mobile-brand"><span className="mobile-logo">VP</span><b>3D VAULT</b></div>
+          <div className="mobile-brand"><span className="mobile-logo">VP</span><b>VP STUDIO</b></div>
           <div className="breadcrumb"><span>Vitor Productions</span><ChevronRight size={15} /><strong>{NAV.find((n) => n.id === tab)?.label}</strong></div>
           <div className="top-actions">
             <label className="global-search"><Search size={18} />
@@ -647,6 +652,7 @@ export default function App() {
             <button className="btn btn-secondary" onClick={retryLibrary}>Reconectar biblioteca</button>
           </div>}
           {!offlineDemo && <McpBridge visible={tab === 'mcp'} assets={assets} projects={projects} films={films} onCommand={executeMcpCommand} />}
+          {tab === 'create' && <ChatStudio assets={assets} onGeneratedCity={saveGeneratedCity} onSaveFilm={saveFilm} onProduced={saveProducedVideo} onOpenDirector={id => {if(id)setStudioFilmId(id);setTab('film-studio');}} />}
           {tab === 'models' && <ModelStudio assets={assets} activeId={studioModelId} onSelect={setStudioModelId} onImport={() => openUpload()} remoteCommand={remoteCamera} />}
           {tab === 'video-editor' && <VideoStudio assets={assets} activeId={studioVideoId} onSelect={setStudioVideoId} onImport={() => openUpload()} onSave={saveVideoEdit} />}
           {tab === 'film-studio' && <FilmStudio films={films} assets={assets} activeId={studioFilmId} onSelect={setStudioFilmId} onSave={saveFilm} onDelete={deleteFilm} onProduced={saveProducedVideo} remoteCommand={remoteFilm} preferredAudioId={preferredNarrationId} preferredModelId={preferredCityId} />}
@@ -824,7 +830,7 @@ export default function App() {
             <div className="backup-tips"><Info size={18} /><span>Recomendado: guarde pelo menos duas cópias do ZIP em locais diferentes. Arquivos 3D muito grandes podem exceder a memória disponível para criar um ZIP no navegador.</span></div>
           </>}
         </main>
-        <footer className="site-footer"><span>© Vitor Productions · 3D Vault</span><span><span className="footer-dot" /> Armazenamento local · Versão 0.1</span></footer>
+        <footer className="site-footer"><span>© Vitor Productions · VP Studio</span><span><span className="footer-dot" /> Criação 3D local · Beta</span></footer>
       </div>
 
       <nav className="mobile-nav" aria-label="Navegação do celular">

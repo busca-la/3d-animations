@@ -1,3 +1,27 @@
+# VP Studio — Vitor Productions
+
+## Criação de vídeos 3D por chat (homepage)
+
+A entrada principal do VP Studio agora é a aba **Criar vídeo**, um chat minimalista com o símbolo oficial Vitor Productions vetorizado a partir do arquivo da marca enviado pelo usuário. O fundo usa **React Bits FluxLines JS-CSS**, componente integrado diretamente em `src/components/FluxLines.jsx` e `src/components/FluxLines.css`. Configuração: 3 cores brancas, `glow={2}`, `rimWidth={0.2}`, `lineWidth={1}`, `flowDirection="down"`, `mouseInteraction` e `clickSwirl`, com DPR reduzido para desempenho, fundo escuro e opacidade para legibilidade. Nenhum pacote extra é necessário para o efeito. Código/avisos: `docs/REACT_BITS_LICENSE.md`.
+
+O fluxo de produção é real e inteiramente no navegador:
+1. O usuário escreve a ideia ou dita pelo microfone, quando o navegador oferece Web Speech API.
+2. `src/filmPrompt.js` compila o pedido local em um roteiro `sanitizeFilm`, com sequência de planos, câmera, movimentos, duração (6–60 s), cenário e formato.
+3. Quando a descrição fala em cidade, o sistema compila a geometria procedural de quarteirões usando `cityPrompt.js` + `cityWorld.js`, exporta um arquivo GLB via `GLTFExporter` e salva o modelo no IndexedDB.
+4. O `filmEngine.js` anima a cidade, a câmera e as ações, e `ChatStudio.jsx` grava o canvas com `MediaRecorder`, produzindo MP4/WebM conforme compatibilidade.
+5. O chat apresenta o vídeo pronto, botão de download e acesso ao Diretor 3D; modelos, roteiros e vídeos são preservados na biblioteca local. Não há chamada paga de API, chatbot LLM externo ou geração fotorealista ilimitada. A voz é **entrada ditada**; narração falada na trilha deve ser produzida pelo Estúdio de Voz e incluída no Diretor quando desejado. O navegador deve permanecer aberto durante a gravação.
+
+**Testes realizados (Chromium/Playwright, ambiente isolado):**
+- Homepage inicializa com FluxLines no fundo, SVG da marca, caixa de chat e 3 descrições opcionais, sem erros.
+- Pedido de hamburgueria (8 segundos, 9:16) produziu arquivo MP4 reproduzível e salvo em `assets`, renderizado em 540×960; o tempo codificado pode variar com o navegador e a performance.
+- Pedido de cidade futurista noturna com 5 prédios, escola, hospital e zero carros produziu GLB (~161 KB) e vídeo (~213 KB). `citySpec` foi persistido com os detalhes corretos, e o filme foi reaberto no Diretor 3D.
+- Layout móvel a 393 px sem rolagem horizontal.
+- `npm run build` concluiu com sucesso; testes reais de microfone e Safari ainda dependem do dispositivo do usuário.
+
+**Pontos importantes:** o interpretador de texto é baseado em regras, não em uma IA neural de geração de vídeo. Não promete objetos não programados, física cinematográfica completa nem narração automática. Gravação usa recursos do navegador e pode variar entre dispositivos.
+
+---
+
 ## Minha conta — autenticação Google / Supabase
 
 A seção **Minha conta** foi adicionada ao 3D Studio, preparada para login com Google via Supabase Auth (OAuth 2.0 + PKCE), verificação de sessão, exibição de usuário e logout. É uma integração **opcional e segura**: na ausência de `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` o site não tenta autenticar nem inventa dados de clientes. O editor e a biblioteca local continuam disponíveis.
